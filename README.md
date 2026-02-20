@@ -1,4 +1,4 @@
-# Webstream Module (Move Anything)
+# Webstream Module (Move Everything)
 
 Experimental v2 sound-generator module for web audio playback via provider backends.
 
@@ -78,3 +78,10 @@ See `BUILDING.md` for detailed, reproducible steps for `yt-dlp`, `deno`, and `ff
 - Third-party notices: `THIRD_PARTY_NOTICES.md`
 - License copies: `licenses/`
 - Users are responsible for complying with source-platform terms and content rights.
+
+## AI Assistance Disclaimer
+
+This module is part of Move Everything and was developed with AI assistance, including Claude, Codex, and other AI assistants.
+
+All architecture, implementation, and release decisions are reviewed by human maintainers.  
+AI-assisted content may still contain errors, so please validate functionality, security, and license compatibility before production use.
