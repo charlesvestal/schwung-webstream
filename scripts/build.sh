@@ -61,6 +61,7 @@ echo "Compiling v2 DSP plugin..."
   -lpthread -lm
 
 cat src/module.json > dist/webstream/module.json
+[ -f src/help.json ] && cat src/help.json > dist/webstream/help.json
 cat src/ui.js > dist/webstream/ui.js
 cat src/ui_chain.js > dist/webstream/ui_chain.js
 cat build/module/dsp.so > dist/webstream/dsp.so

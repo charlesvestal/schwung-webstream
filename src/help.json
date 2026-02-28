@@ -1,0 +1,82 @@
+{
+  "title": "Webstream",
+  "children": [
+    {
+      "title": "Overview",
+      "lines": [
+        "Web audio search",
+        "and streaming.",
+        "",
+        "Search and play",
+        "audio from YouTube,",
+        "FreeSound, Archive,",
+        "and SoundCloud.",
+        "",
+        "Requires internet",
+        "connection."
+      ]
+    },
+    {
+      "title": "Controls",
+      "children": [
+        {
+          "title": "Playback Knobs",
+          "lines": [
+            "Touch a knob then",
+            "turn right to",
+            "confirm action:",
+            "",
+            "Knob 1: Play/Pause",
+            "Knob 2: Rewind 15s",
+            "Knob 3: Forward 15s",
+            "Knob 7: Stop",
+            "Knob 8: Restart",
+            "",
+            "Turn left to cancel."
+          ]
+        },
+        {
+          "title": "Searching",
+          "lines": [
+            "Select [New Search]",
+            "from the menu to",
+            "enter a query.",
+            "",
+            "Providers:",
+            " [YT] YouTube",
+            " [FS] FreeSound",
+            " [AR] Archive.org",
+            " [SC] SoundCloud",
+            "",
+            "Up to 20 results",
+            "per search.",
+            "",
+            "Search history",
+            "saved (max 20)."
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Playback",
+      "lines": [
+        "Select a result to",
+        "start streaming.",
+        "",
+        "Status indicator:",
+        " Loading: resolving",
+        " Buffering: filling",
+        " Streaming: playing",
+        " Paused: paused",
+        " Seeking: skipping",
+        "",
+        "Gain: 0-2x output",
+        "level.",
+        "",
+        "60-second ring",
+        "buffer prevents",
+        "audio dropouts."
+      ]
+    }
+  ]
+}
