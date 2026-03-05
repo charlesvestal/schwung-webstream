@@ -34,7 +34,7 @@ const PROVIDERS = [
   { id: 'freesound', label: 'FreeSound' },
   { id: 'archive', label: 'Archive.org' },
   { id: 'soundcloud', label: 'SoundCloud' },
-  // { id: 'samplette', label: 'Samplette' }
+  { id: 'samplette', label: 'Samplette' }
 ];
 const PROVIDER_TAGS = {
   youtube: '[YT]',
@@ -297,13 +297,17 @@ function submitSearch(providerId, query) {
   host_module_set_param('search_query', q);
 }
 
-function clearSearchState() {
+function clearSearchState(stopStream) {
   searchQuery = '';
   searchStatus = 'idle';
   searchCount = 0;
   results = [];
   selectedIndex = 0;
   menuState.selectedIndex = 0;
+  scrollOffset = 0;
+  if (stopStream) {
+    host_module_set_param('stop_step', 'trigger');
+  }
   host_module_set_param('search_query', '');
   statusMessage = 'New search';
   rebuildMenu();
@@ -320,7 +324,7 @@ function openSearchHistoryMenu() {
       const query = String(entry?.query || '').trim();
       const provider = normalizeProvider(entry?.provider);
       if (!query) continue;
-      const label = cleanLabel(`${providerTag(provider)} ${query}`, 24);
+      const label = `${providerTag(provider)} ${query}`;
       items.push(createAction(label, () => {
         while (menuStack.depth() > 1) {
           menuStack.pop();
@@ -335,7 +339,7 @@ function openSearchHistoryMenu() {
   }
 
   menuStack.push({
-    title: 'Previous',
+    title: 'Search History',
     items,
     selectedIndex: 0
   });
@@ -561,7 +565,7 @@ function openSampletteHistoryMenu() {
     if (row?.meta_tempo) meta.push(`${row.meta_tempo}bpm`);
     const suffix = meta.length > 0 ? ` [${meta.join(' ')}]` : '';
     items.push(
-      createAction(cleanLabel(`${title}${suffix}`, 28), () => {
+      createAction(`${title}${suffix}`, () => {
         if (!row || !row.url) return;
         host_module_set_param('samplette_auto_advance', '1');
         host_module_set_param('samplette_result_index', String(i));
@@ -622,10 +626,15 @@ function isPlaying() {
 }
 
 function buildSampletteRootItems() {
-  const items = [
-    createAction(playPauseLabel(), () => togglePlayPause()),
-    createAction('[Shuffle]', () => sampletteShuffle())
-  ];
+  const isLoading = streamStatus === 'loading' || streamStatus === 'buffering';
+  const isStopped = streamStatus === 'stopped' || streamStatus === 'eof';
+  const items = [];
+  if (!(isStopped && results.length === 0)) {
+    items.push(createAction(playPauseLabel(), () => togglePlayPause()));
+  }
+  if (!isLoading) {
+    items.push(createAction('[Shuffle]', () => sampletteShuffle()));
+  }
   if (isPlaying()) {
     items.push(createAction('[Next Track]', () => sampletteNextTrack()));
     items.push(createAction('[<< 15s]', () => { host_module_set_param('rewind_15_step', 'trigger'); statusMessage = 'Rewind 15s'; needsRedraw = true; }));
@@ -636,7 +645,7 @@ function buildSampletteRootItems() {
   items.push(createAction('[History...]', () => openSampletteHistoryMenu()));
 
   items.push(createAction('[Change Provider...]', () => {
-    clearSearchState();
+    clearSearchState(true);
     openProviderMenu();
   }));
 
@@ -672,7 +681,7 @@ function buildRootItems() {
   for (let i = 0; i < count; i++) {
     const row = results[i];
     const rowProvider = normalizeProvider(row?.provider || searchProvider);
-    const title = cleanLabel(row?.title || `Result ${i + 1}`);
+    const title = row?.title || `Result ${i + 1}`;
     items.push(
       createAction(title, () => {
         if (!row || !row.url) return;
@@ -691,8 +700,8 @@ function rebuildMenu() {
   const items = buildRootItems();
   const title = `Webstream ${providerTag(searchProvider)}`;
   if (menuStack.depth() === 0) {
-    rootMenu = { title, items, selectedIndex: 0 };
-    menuStack.push(rootMenu);
+    menuStack.push({ title, items, selectedIndex: 0 });
+    rootMenu = menuStack.current();
     menuState.selectedIndex = 0;
   } else if (rootMenu) {
     rootMenu.title = title;
