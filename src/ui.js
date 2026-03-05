@@ -34,7 +34,7 @@ const PROVIDERS = [
   { id: 'freesound', label: 'FreeSound' },
   { id: 'archive', label: 'Archive.org' },
   { id: 'soundcloud', label: 'SoundCloud' },
-  { id: 'samplette', label: 'Samplette' }
+  // { id: 'samplette', label: 'Samplette' }
 ];
 const PROVIDER_TAGS = {
   youtube: '[YT]',
