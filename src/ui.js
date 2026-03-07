@@ -34,7 +34,7 @@ const PROVIDERS = [
   { id: 'freesound', label: 'FreeSound' },
   { id: 'archive', label: 'Archive.org' },
   { id: 'soundcloud', label: 'SoundCloud' },
-  // { id: 'samplette', label: 'Samplette' }
+  { id: 'samplette', label: 'Samplette' }
 ];
 const PROVIDER_TAGS = {
   youtube: '[YT]',
@@ -87,6 +87,8 @@ let spinnerTick = 0;
 let spinnerFrame = 0;
 let needsRedraw = true;
 let pendingKnobAction = null;
+var recSourceMode = false;
+var recFlashCounter = 0;
 let scrollOffset = 0;
 let scrollTick = 0;
 const FOOTER_MAX_CHARS = 21;
@@ -802,6 +804,7 @@ function openSearchPrompt(providerId = searchProvider) {
   openTextEntry({
     title: `Search ${providerTag(provider)}`,
     initialText: '',
+    padSelect: true,
     onConfirm: (text) => {
       const query = (text || '').trim();
       if (!query) {
@@ -856,6 +859,27 @@ function currentFooter() {
   return 'Click:select Back:exit';
 }
 
+function drawRecSourceIndicator() {
+  if (!recSourceMode) return;
+  recFlashCounter++;
+
+  var levelStr = host_module_get_param('audio_level');
+  var level = levelStr ? parseFloat(levelStr) : 0;
+
+  var labelText = 'REC:[WS]';
+  var labelW = labelText.length * 6;
+  var meterX = 128 - labelW - 5;
+  var meterH = Math.round(level * 7);
+  if (meterH > 0) {
+    fill_rect(meterX, 2 + (7 - meterH), 2, meterH, 1);
+  }
+
+  var show = (recFlashCounter % 30) < 20;
+  if (show) {
+    print(128 - labelW, 2, labelText, 1);
+  }
+}
+
 globalThis.init = function () {
   searchProvider = normalizeProvider(host_module_get_param('search_provider') || 'youtube');
   searchQuery = host_module_get_param('search_query') || '';
@@ -885,6 +909,11 @@ globalThis.init = function () {
 };
 
 globalThis.tick = function () {
+  if (!recSourceMode) {
+    var rsm = host_module_get_param('rec_source_mode');
+    if (rsm === '1') recSourceMode = true;
+  }
+
   if (isTextEntryActive()) {
     tickTextEntry();
     drawTextEntry();
@@ -929,6 +958,7 @@ globalThis.tick = function () {
       state: menuState,
       footer: currentFooter()
     });
+    drawRecSourceIndicator();
 
     needsRedraw = false;
   }

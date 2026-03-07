@@ -125,6 +125,8 @@ typedef struct {
     char resolve_error[256];
 
     float gain;
+    bool rec_source_mode;
+    float peak_level;
 
     int samplette_result_index;
     bool samplette_auto_advance;
@@ -2014,6 +2016,11 @@ static void v2_set_param(void *instance, const char *key, const char *val) {
     char log_msg[384];
     if (!inst || !key || !val) return;
 
+    if (strcmp(key, "rec_source_mode") == 0) {
+        inst->rec_source_mode = (strcmp(val, "1") == 0);
+        return;
+    }
+
     if (strcmp(key, "gain") == 0) {
         float g = (float)atof(val);
         if (g < 0.0f) g = 0.0f;
@@ -2255,6 +2262,9 @@ static int v2_get_param(void *instance, const char *key, char *buf, int buf_len)
     yt_instance_t *inst = (yt_instance_t *)instance;
     if (!key || !buf || buf_len <= 0) return -1;
 
+    if (strcmp(key, "audio_level") == 0) {
+        return snprintf(buf, (size_t)buf_len, "%.3f", inst ? inst->peak_level : 0.0f);
+    }
     if (strcmp(key, "gain") == 0) {
         return snprintf(buf, (size_t)buf_len, "%.2f", inst ? inst->gain : 1.0f);
     }
@@ -2484,6 +2494,16 @@ static int v2_get_param(void *instance, const char *key, char *buf, int buf_len)
         }
     }
 
+    if (strcmp(key, "playback_active") == 0) {
+        if (!inst) return snprintf(buf, (size_t)buf_len, "0");
+        if (inst->stream_url[0] == '\0') return snprintf(buf, (size_t)buf_len, "0");
+        if (inst->paused) return snprintf(buf, (size_t)buf_len, "0");
+        if (inst->stream_eof) return snprintf(buf, (size_t)buf_len, "0");
+        if (inst->pipe && inst->prime_needed_samples == 0)
+            return snprintf(buf, (size_t)buf_len, "1");
+        return snprintf(buf, (size_t)buf_len, "0");
+    }
+
     return -1;
 }
 
@@ -2636,6 +2656,16 @@ static void v2_render_block(void *instance, int16_t *out_interleaved_lr, int fra
             if (s < -32768.0f) s = -32768.0f;
             out_interleaved_lr[i] = (int16_t)s;
         }
+    }
+
+    /* Update peak level for rec source monitoring */
+    {
+        float peak = 0.0f;
+        for (i = 0; i < needed; i++) {
+            float s = (float)abs(out_interleaved_lr[i]) / 32768.0f;
+            if (s > peak) peak = s;
+        }
+        inst->peak_level = peak;
     }
 
     /* Re-inject anti-idle after ring_pop/gain may have overwritten position 0 */
