@@ -34,6 +34,7 @@ const PROVIDERS = [
   { id: 'freesound', label: 'FreeSound' },
   { id: 'archive', label: 'Archive.org' },
   { id: 'soundcloud', label: 'SoundCloud' },
+  { id: 'cratedig', label: 'Crate Dig' },
   // { id: 'samplette', label: 'Samplette' }
 ];
 const PROVIDER_TAGS = {
@@ -41,6 +42,7 @@ const PROVIDER_TAGS = {
   freesound: '[FS]',
   archive: '[AR]',
   soundcloud: '[SC]',
+  cratedig: '[CD]',
   samplette: '[SA]'
 };
 
@@ -59,6 +61,47 @@ const SAMPLETTE_TEMPOS = [
   { label: 'Fast (120-150)', min: 120, max: 150 },
   { label: 'Very Fast (150+)', min: 150, max: 300 }
 ];
+
+const CRATEDIG_GENRES = [
+  'Any', 'Blues', 'Brass & Military', "Children's", 'Classical',
+  'Electronic', 'Folk, World, & Country', 'Funk / Soul', 'Hip Hop',
+  'Jazz', 'Latin', 'Non-Music', 'Pop', 'Reggae', 'Rock', 'Stage & Screen'
+];
+
+const CRATEDIG_STYLES = {
+  'Blues': ['Any', 'Chicago Blues', 'Country Blues', 'Delta Blues', 'Electric Blues', 'Harmonica Blues', 'Jump Blues', 'Louisiana Blues', 'Modern Electric Blues', 'Piano Blues', 'Rhythm & Blues', 'Texas Blues'],
+  'Brass & Military': ['Any', 'Brass Band', 'Marches', 'Military'],
+  "Children's": ['Any', 'Educational', 'Nursery Rhymes', 'Story'],
+  'Classical': ['Any', 'Baroque', 'Classical', 'Contemporary', 'Impressionist', 'Medieval', 'Modern', 'Neo-Classical', 'Neo-Romantic', 'Opera', 'Post-Modern', 'Renaissance', 'Romantic'],
+  'Electronic': ['Any', 'Abstract', 'Acid', 'Acid House', 'Acid Jazz', 'Ambient', 'Breakbeat', 'Breakcore', 'Breaks', 'Dark Ambient', 'Deep House', 'Disco', 'Downtempo', 'Drone', 'Dub Techno', 'Electro', 'Experimental', 'Garage House', 'House', 'IDM', 'Industrial', 'Jungle', 'Leftfield', 'Minimal', 'Musique Concrète', 'Noise', 'Nu-Disco', 'Synth-pop', 'Techno', 'Trance', 'Trip Hop'],
+  'Folk, World, & Country': ['Any', 'African', 'Afrobeat', 'Bluegrass', 'Cajun', 'Celtic', 'Country', 'Fado', 'Flamenco', 'Folk', 'Gospel', 'Highlife', 'Hindustani', 'Honky Tonk', 'Indian Classical', 'Klezmer', 'Nordic', 'Pacific', 'Polka', 'Raï', 'Rockabilly', 'Soca', 'Soukous', 'Zydeco'],
+  'Funk / Soul': ['Any', 'Afrobeat', 'Boogie', 'Contemporary R&B', 'Disco', 'Free Funk', 'Funk', 'Gospel', 'Neo Soul', 'New Jack Swing', 'Northern Soul', 'P.Funk', 'Psychedelic', 'Rhythm & Blues', 'Soul', 'Swingbeat'],
+  'Hip Hop': ['Any', 'Bass Music', 'Boom Bap', 'Conscious', 'Crunk', 'Cut-up/DJ', 'Electro', 'G-Funk', 'Gangsta', 'Grime', 'Hardcore Hip-Hop', 'Instrumental', 'Jazz-Funk', 'Pop Rap', 'RnB/Swing', 'Thug Rap', 'Trip Hop', 'Turntablism'],
+  'Jazz': ['Any', 'Afro-Cuban Jazz', 'Avant-garde Jazz', 'Bebop', 'Big Band', 'Bop', 'Bossa Nova', 'Cool Jazz', 'Dixieland', 'Free Improvisation', 'Free Jazz', 'Fusion', 'Gypsy Jazz', 'Hard Bop', 'Jazz-Funk', 'Jazz-Rock', 'Latin Jazz', 'Modal', 'Post Bop', 'Ragtime', 'Smooth Jazz', 'Soul-Jazz', 'Space-Age', 'Swing'],
+  'Latin': ['Any', 'Baião', 'Batucada', 'Bolero', 'Boogaloo', 'Bossa Nova', 'Cha-Cha', 'Charanga', 'Compas', 'Cumbia', 'Descarga', 'Forró', 'Guaracha', 'MPB', 'Mambo', 'Merengue', 'Norteño', 'Plena', 'Rumba', 'Salsa', 'Samba', 'Son', 'Tango', 'Tejano', 'Tropicália', 'Vallenato'],
+  'Non-Music': ['Any', 'Audiobook', 'Comedy', 'Dialogue', 'Education', 'Field Recording', 'Interview', 'Monolog', 'Poetry', 'Political', 'Propaganda', 'Radioplay', 'Religious', 'Spoken Word'],
+  'Pop': ['Any', 'Ballad', 'Baroque Pop', 'Britpop', 'Bubblegum', 'Chanson', 'City Pop', 'Dance-pop', 'Dream Pop', 'Europop', 'Indie Pop', 'J-pop', 'K-pop', 'New Wave', 'Power Pop', 'Schlager', 'Shoegaze', 'Sunshine Pop', 'Synth-pop', 'Teen Pop', 'Vocal'],
+  'Reggae': ['Any', 'Calypso', 'Dancehall', 'Dub', 'Lovers Rock', 'Ragga', 'Reggae', 'Reggae-Pop', 'Rocksteady', 'Roots Reggae', 'Ska', 'Soca'],
+  'Rock': ['Any', 'Acid Rock', 'Alternative Rock', 'Arena Rock', 'Art Rock', 'Blues Rock', 'Classic Rock', 'Doom Metal', 'Garage Rock', 'Glam', 'Grunge', 'Hard Rock', 'Indie Rock', 'Krautrock', 'Lo-Fi', 'Math Rock', 'Mod', 'Noise', 'Post-Punk', 'Post Rock', 'Prog Rock', 'Psychedelic Rock', 'Pub Rock', 'Punk', 'Shoegaze', 'Space Rock', 'Stoner Rock', 'Surf'],
+  'Stage & Screen': ['Any', 'Musical', 'Score', 'Soundtrack', 'Theme']
+};
+
+const CRATEDIG_DECADES = [
+  'Any', '1950s', '1960s', '1970s', '1980s', '1990s', '2000s', '2010s', '2020s'
+];
+
+const CRATEDIG_COUNTRIES = [
+  'Any', 'US', 'UK', 'Jamaica', 'Brazil', 'Japan', 'Nigeria', 'France',
+  'Germany', 'Italy', 'Cuba', 'Colombia', 'India', 'South Africa',
+  'Ethiopia', 'Ghana', 'Senegal', 'Mexico', 'Argentina', 'Australia'
+];
+
+let cratedigFilter = {
+  genre: '',
+  style: '',
+  decade: '',
+  country: ''
+};
 
 let sampletteFilter = {
   genre: [], style: [], country: [], key: [],
@@ -100,6 +143,7 @@ function normalizeProvider(value) {
   if (raw === 'fs') return 'freesound';
   if (raw === 'ia' || raw === 'archiveorg' || raw === 'internetarchive') return 'archive';
   if (raw === 'sc') return 'soundcloud';
+  if (raw === 'cd') return 'cratedig';
   if (raw === 'sa') return 'samplette';
   return raw;
 }
@@ -353,6 +397,13 @@ function openProviderMenu() {
       menuStack.pop();
     }
     menuState.selectedIndex = 0;
+    if (provider.id === 'cratedig') {
+      searchProvider = 'cratedig';
+      host_module_set_param('search_provider', 'cratedig');
+      rebuildMenu();
+      cratedigShuffle();
+      return;
+    }
     if (provider.id === 'samplette') {
       searchProvider = 'samplette';
       host_module_set_param('search_provider', 'samplette');
@@ -386,6 +437,26 @@ function sampletteShuffle() {
 }
 
 function sampletteNextTrack() {
+  host_module_set_param('next_track_step', 'trigger');
+  scrollOffset = 0;
+  statusMessage = 'Next track...';
+  needsRedraw = true;
+}
+
+function cratedigApplyFilter() {
+  host_module_set_param('cratedig_filter', JSON.stringify(cratedigFilter));
+  statusMessage = 'Digging...';
+  needsRedraw = true;
+}
+
+function cratedigShuffle() {
+  host_module_set_param('cratedig_auto_advance', '1');
+  cratedigApplyFilter();
+  statusMessage = 'Digging...';
+  needsRedraw = true;
+}
+
+function cratedigNextTrack() {
   host_module_set_param('next_track_step', 'trigger');
   scrollOffset = 0;
   statusMessage = 'Next track...';
@@ -488,9 +559,121 @@ function openSampletteFiltersMenu() {
   needsRedraw = true;
 }
 
+function refreshCratedigFiltersMenu() {
+  const current = menuStack.current();
+  if (!current || current.title !== 'Filters') return;
+  const genreLabel = cratedigFilter.genre || 'Any';
+  const styleLabel = cratedigFilter.style || 'Any';
+  const decadeLabel = cratedigFilter.decade || 'Any';
+  const countryLabel = cratedigFilter.country || 'Any';
+
+  current.items = [
+    createAction('Genre: ' + genreLabel, function() { openCratedigGenreMenu(); }),
+    createAction('Style: ' + styleLabel, function() { openCratedigStyleMenu(); }),
+    createAction('Decade: ' + decadeLabel, function() { openCratedigDecadeMenu(); }),
+    createAction('Country: ' + countryLabel, function() { openCratedigCountryMenu(); }),
+    createAction('[Apply & Dig]', function() {
+      while (menuStack.depth() > 1) menuStack.pop();
+      menuState.selectedIndex = 0;
+      cratedigShuffle();
+    })
+  ];
+  clampSelectedIndex();
+  needsRedraw = true;
+}
+
+function openCratedigGenreMenu() {
+  const items = CRATEDIG_GENRES.map(function(g) {
+    const current = cratedigFilter.genre || 'Any';
+    const prefix = (g === current) ? '> ' : '  ';
+    return createAction(prefix + g, function() {
+      cratedigFilter.genre = (g === 'Any') ? '' : g;
+      cratedigFilter.style = '';
+      menuStack.pop();
+      menuState.selectedIndex = 0;
+      refreshCratedigFiltersMenu();
+    });
+  });
+  menuStack.push({ title: 'Genre', items: items, selectedIndex: 0 });
+  menuState.selectedIndex = 0;
+  needsRedraw = true;
+}
+
+function openCratedigStyleMenu() {
+  const genre = cratedigFilter.genre;
+  const styleList = (genre && CRATEDIG_STYLES[genre]) ? CRATEDIG_STYLES[genre] : ['Any'];
+  const items = styleList.map(function(s) {
+    const current = cratedigFilter.style || 'Any';
+    const prefix = (s === current) ? '> ' : '  ';
+    return createAction(prefix + s, function() {
+      cratedigFilter.style = (s === 'Any') ? '' : s;
+      menuStack.pop();
+      menuState.selectedIndex = 0;
+      refreshCratedigFiltersMenu();
+    });
+  });
+  menuStack.push({ title: 'Style', items: items, selectedIndex: 0 });
+  menuState.selectedIndex = 0;
+  needsRedraw = true;
+}
+
+function openCratedigDecadeMenu() {
+  const items = CRATEDIG_DECADES.map(function(d) {
+    const current = cratedigFilter.decade || 'Any';
+    const prefix = (d === current) ? '> ' : '  ';
+    return createAction(prefix + d, function() {
+      cratedigFilter.decade = (d === 'Any') ? '' : d;
+      menuStack.pop();
+      menuState.selectedIndex = 0;
+      refreshCratedigFiltersMenu();
+    });
+  });
+  menuStack.push({ title: 'Decade', items: items, selectedIndex: 0 });
+  menuState.selectedIndex = 0;
+  needsRedraw = true;
+}
+
+function openCratedigCountryMenu() {
+  const items = CRATEDIG_COUNTRIES.map(function(c) {
+    const current = cratedigFilter.country || 'Any';
+    const prefix = (c === current) ? '> ' : '  ';
+    return createAction(prefix + c, function() {
+      cratedigFilter.country = (c === 'Any') ? '' : c;
+      menuStack.pop();
+      menuState.selectedIndex = 0;
+      refreshCratedigFiltersMenu();
+    });
+  });
+  menuStack.push({ title: 'Country', items: items, selectedIndex: 0 });
+  menuState.selectedIndex = 0;
+  needsRedraw = true;
+}
+
+function openCratedigFiltersMenu() {
+  const genreLabel = cratedigFilter.genre || 'Any';
+  const styleLabel = cratedigFilter.style || 'Any';
+  const decadeLabel = cratedigFilter.decade || 'Any';
+  const countryLabel = cratedigFilter.country || 'Any';
+
+  const items = [
+    createAction('Genre: ' + genreLabel, function() { openCratedigGenreMenu(); }),
+    createAction('Style: ' + styleLabel, function() { openCratedigStyleMenu(); }),
+    createAction('Decade: ' + decadeLabel, function() { openCratedigDecadeMenu(); }),
+    createAction('Country: ' + countryLabel, function() { openCratedigCountryMenu(); }),
+    createAction('[Apply & Dig]', function() {
+      while (menuStack.depth() > 1) menuStack.pop();
+      menuState.selectedIndex = 0;
+      cratedigShuffle();
+    })
+  ];
+  menuStack.push({ title: 'Filters', items: items, selectedIndex: 0 });
+  menuState.selectedIndex = 0;
+  needsRedraw = true;
+}
+
 function getCurrentlyPlayingResult() {
-  if (searchProvider === 'samplette') {
-    const idx = parseInt(host_module_get_param('samplette_result_index') || '0', 10);
+  if (searchProvider === 'samplette' || searchProvider === 'cratedig') {
+    const idx = parseInt(host_module_get_param('cratedig_result_index') || '0', 10);
     if (idx >= 0 && idx < results.length) return results[idx];
     return null;
   }
@@ -506,6 +689,16 @@ function sampletteNowPlayingLabel() {
   if (r.meta_key) parts.push(`${r.meta_key}${r.meta_scale ? ' ' + r.meta_scale : ''}`);
   if (r.meta_tempo) parts.push(`${r.meta_tempo}bpm`);
   if (r.meta_genre) parts.push(cleanLabel(r.meta_genre, 14));
+  return parts.join(' | ');
+}
+
+function cratedigNowPlayingLabel() {
+  const r = getCurrentlyPlayingResult();
+  if (!r) return null;
+  const parts = [cleanLabel(r.title, 20)];
+  if (r.meta_genre) parts.push(cleanLabel(r.meta_genre, 14));
+  if (r.meta_year) parts.push(r.meta_year);
+  if (r.meta_country) parts.push(cleanLabel(r.meta_country, 10));
   return parts.join(' | ');
 }
 
@@ -584,6 +777,47 @@ function openSampletteHistoryMenu() {
   needsRedraw = true;
 }
 
+function openCratedigHistoryMenu() {
+  if (results.length === 0) {
+    menuStack.push({
+      title: 'History',
+      items: [createAction('(No tracks yet)', function() {})],
+      selectedIndex: 0
+    });
+    menuState.selectedIndex = 0;
+    needsRedraw = true;
+    return;
+  }
+
+  const items = [];
+  const count = Math.min(results.length, MAX_MENU_RESULTS);
+  for (let i = 0; i < count; i++) {
+    const row = results[i];
+    const title = cleanLabel(row && row.title ? row.title : 'Result ' + (i + 1));
+    const meta = [];
+    if (row && row.meta_genre) meta.push(cleanLabel(row.meta_genre, 10));
+    if (row && row.meta_year) meta.push(row.meta_year);
+    const suffix = meta.length > 0 ? ' [' + meta.join(' ') + ']' : '';
+    items.push(
+      createAction(title + suffix, (function(r, idx) { return function() {
+        if (!r || !r.url) return;
+        host_module_set_param('cratedig_auto_advance', '1');
+        host_module_set_param('cratedig_result_index', String(idx));
+        host_module_set_param('stream_provider', 'youtube');
+        host_module_set_param('stream_url', r.url);
+        while (menuStack.depth() > 1) menuStack.pop();
+        menuState.selectedIndex = 0;
+        statusMessage = 'Loading...';
+        needsRedraw = true;
+      }; })(row, i))
+    );
+  }
+
+  menuStack.push({ title: 'History', items: items, selectedIndex: 0 });
+  menuState.selectedIndex = 0;
+  needsRedraw = true;
+}
+
 function playPauseLabel() {
   if (streamStatus === 'loading' || streamStatus === 'buffering') return '[Cancel]';
   if (streamStatus === 'paused') return '[Play]';
@@ -604,9 +838,9 @@ function togglePlayPause() {
       const row = results[0];
       if (row && row.url) {
         const provider = normalizeProvider(row.provider || searchProvider);
-        if (searchProvider === 'samplette') {
-          host_module_set_param('samplette_auto_advance', '1');
-          host_module_set_param('samplette_result_index', '0');
+        if (searchProvider === 'samplette' || searchProvider === 'cratedig') {
+          host_module_set_param('cratedig_auto_advance', '1');
+          host_module_set_param('cratedig_result_index', '0');
         }
         host_module_set_param('stream_provider', provider);
         host_module_set_param('stream_url', row.url);
@@ -623,6 +857,31 @@ function togglePlayPause() {
 
 function isPlaying() {
   return streamStatus === 'streaming' || streamStatus === 'paused';
+}
+
+function buildCratedigRootItems() {
+  const isLoading = streamStatus === 'loading' || streamStatus === 'buffering';
+  const isStopped = streamStatus === 'stopped' || streamStatus === 'eof';
+  const items = [];
+  if (!(isStopped && results.length === 0)) {
+    items.push(createAction(playPauseLabel(), function() { togglePlayPause(); }));
+  }
+  if (!isLoading) {
+    items.push(createAction('[Dig!]', function() { cratedigShuffle(); }));
+  }
+  if (isPlaying()) {
+    items.push(createAction('[Next Track]', function() { cratedigNextTrack(); }));
+    items.push(createAction('[<< 15s]', function() { host_module_set_param('rewind_15_step', 'trigger'); statusMessage = 'Rewind 15s'; needsRedraw = true; }));
+    items.push(createAction('[15s >>]', function() { host_module_set_param('forward_15_step', 'trigger'); statusMessage = 'Forward 15s'; needsRedraw = true; }));
+    items.push(createAction('[Now Playing...]', function() { openNowPlayingMenu(); }));
+  }
+  items.push(createAction('[Filters...]', function() { openCratedigFiltersMenu(); }));
+  items.push(createAction('[History...]', function() { openCratedigHistoryMenu(); }));
+  items.push(createAction('[Change Provider...]', function() {
+    clearSearchState(true);
+    openProviderMenu();
+  }));
+  return items;
 }
 
 function buildSampletteRootItems() {
@@ -653,6 +912,9 @@ function buildSampletteRootItems() {
 }
 
 function buildRootItems() {
+  if (searchProvider === 'cratedig') {
+    return buildCratedigRootItems();
+  }
   if (searchProvider === 'samplette') {
     return buildSampletteRootItems();
   }
@@ -715,7 +977,7 @@ function rebuildMenu() {
 
 function loadResults() {
   const out = [];
-  const isSamplette = searchProvider === 'samplette';
+  const isSamplette = searchProvider === 'samplette' || searchProvider === 'cratedig';
   for (let i = 0; i < searchCount && i < MAX_MENU_RESULTS; i++) {
     const provider = normalizeProvider(host_module_get_param(`search_result_provider_${i}`) || searchProvider);
     const title = host_module_get_param(`search_result_title_${i}`) || '';
@@ -754,29 +1016,29 @@ function refreshState() {
     rebuildMenu();
 
     if (searchStatus === 'searching') {
-      statusMessage = searchProvider === 'samplette' ? 'Finding tracks...' : `Searching ${providerTag(searchProvider)}...`;
+      statusMessage = (searchProvider === 'samplette' || searchProvider === 'cratedig') ? 'Finding tracks...' : `Searching ${providerTag(searchProvider)}...`;
     } else if (searchStatus === 'queued') {
       statusMessage = 'Search queued...';
     } else if (searchStatus === 'done') {
-      if (searchProvider === 'samplette' && searchCount > 0 && prevSearchStatus !== 'done') {
+      if ((searchProvider === 'samplette' || searchProvider === 'cratedig') && searchCount > 0 && prevSearchStatus !== 'done') {
         /* Auto-play first result */
         const r = results[0];
         if (r && r.url) {
-          host_module_set_param('samplette_auto_advance', '1');
-          host_module_set_param('samplette_result_index', '0');
+          host_module_set_param('cratedig_auto_advance', '1');
+          host_module_set_param('cratedig_result_index', '0');
           host_module_set_param('stream_provider', 'youtube');
           host_module_set_param('stream_url', r.url);
           statusMessage = 'Loading...';
         } else {
           statusMessage = 'Ready';
         }
-      } else if (searchProvider === 'samplette') {
+      } else if (searchProvider === 'samplette' || searchProvider === 'cratedig') {
         statusMessage = 'Ready';
       } else {
         statusMessage = `${searchCount} results`;
       }
     } else if (searchStatus === 'no_results') {
-      statusMessage = searchProvider === 'samplette' ? 'No tracks found' : 'No results';
+      statusMessage = (searchProvider === 'samplette' || searchProvider === 'cratedig') ? 'No tracks found' : 'No results';
     } else if (searchStatus === 'error') {
       statusMessage = 'Search failed';
     } else if (searchStatus === 'busy') {
@@ -831,6 +1093,9 @@ function nowPlayingFooter() {
   if (streamStatus !== 'streaming' && streamStatus !== 'paused') return null;
   const r = getCurrentlyPlayingResult();
   if (!r) return null;
+  if (searchProvider === 'cratedig') {
+    return cratedigNowPlayingLabel();
+  }
   if (searchProvider === 'samplette') {
     return sampletteNowPlayingLabel();
   }
