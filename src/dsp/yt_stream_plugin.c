@@ -126,11 +126,11 @@ typedef struct {
 
     float gain;
 
-    int samplette_result_index;
-    bool samplette_auto_advance;
+    int cratedig_result_index;
+    bool cratedig_auto_advance;
     int next_track_step;
     uint64_t last_next_track_ms;
-    char samplette_pending_filter[2048];
+    char cratedig_pending_filter[2048];
 
     pthread_mutex_t prefetch_mutex;
     pthread_t prefetch_thread;
@@ -353,15 +353,15 @@ static void* warmup_thread_main(void *arg) {
     err[0] = '\0';
     if (ensure_daemon_started(inst, err, sizeof(err)) == 0) {
         yt_log("yt-dlp daemon warmed");
-        /* Pre-init samplette session so first search is fast */
+        /* Pre-init cratedig session so first search is fast */
         pthread_mutex_lock(&inst->daemon_mutex);
         if (inst->daemon_ready && inst->daemon_in) {
-            if (fputs("SAMPLETTE_INIT\n", inst->daemon_in) != EOF) {
+            if (fputs("CRATEDIG_INIT\n", inst->daemon_in) != EOF) {
                 fflush(inst->daemon_in);
                 if (read_daemon_line_locked(inst, line, sizeof(line), 20000) == 0) {
-                    yt_log("samplette session pre-warmed");
+                    yt_log("cratedig session pre-warmed");
                 } else {
-                    yt_log("samplette session pre-warm timeout");
+                    yt_log("cratedig session pre-warm timeout");
                 }
             }
         }
@@ -447,6 +447,10 @@ static void normalize_provider_value(const char *in, char *out, size_t out_len) 
     }
     if (strcmp(tmp, "samplette") == 0) {
         snprintf(out, out_len, "samplette");
+        return;
+    }
+    if (strcmp(tmp, "cd") == 0 || strcmp(tmp, "cratedig") == 0) {
+        snprintf(out, out_len, "cratedig");
         return;
     }
     if (tmp[0] == '\0') {
@@ -1099,7 +1103,7 @@ static int run_search_command_daemon(yt_instance_t *inst,
     int attempt;
     int timed_out;
     bool retryable_timeout = false;
-    bool is_samplette;
+    bool is_cratedig;
 
     if (!inst || !provider || !query || !results || !out_count) {
         if (err && err_len > 0) snprintf(err, err_len, "invalid search args");
@@ -1107,8 +1111,8 @@ static int run_search_command_daemon(yt_instance_t *inst,
     }
 
     normalize_provider_value(provider, clean_provider, sizeof(clean_provider));
-    is_samplette = (strcmp(clean_provider, "samplette") == 0);
-    if (!is_samplette) {
+    is_cratedig = (strcmp(clean_provider, "samplette") == 0 || strcmp(clean_provider, "cratedig") == 0);
+    if (!is_cratedig) {
         sanitize_query(query, clean_query, sizeof(clean_query));
     } else {
         clean_query[0] = '\0';
@@ -1124,14 +1128,14 @@ static int run_search_command_daemon(yt_instance_t *inst,
             return -1;
         }
 
-        if (is_samplette) {
+        if (is_cratedig) {
             /* Send pending filter before searching (runs on search thread, OK to block) */
             pthread_mutex_lock(&inst->search_mutex);
-            if (inst->samplette_pending_filter[0] != '\0') {
+            if (inst->cratedig_pending_filter[0] != '\0') {
                 char filter_req[2048 + 32];
                 char filter_line[DAEMON_LINE_MAX];
-                snprintf(filter_req, sizeof(filter_req), "SAMPLETTE_FILTER\t%s\n", inst->samplette_pending_filter);
-                inst->samplette_pending_filter[0] = '\0';
+                snprintf(filter_req, sizeof(filter_req), "CRATEDIG_FILTER\t%s\n", inst->cratedig_pending_filter);
+                inst->cratedig_pending_filter[0] = '\0';
                 pthread_mutex_unlock(&inst->search_mutex);
                 if (fputs(filter_req, inst->daemon_in) != EOF) {
                     fflush(inst->daemon_in);
@@ -1140,7 +1144,7 @@ static int run_search_command_daemon(yt_instance_t *inst,
             } else {
                 pthread_mutex_unlock(&inst->search_mutex);
             }
-            snprintf(req, sizeof(req), "SAMPLETTE_SEARCH\t%d\n", SEARCH_MAX_RESULTS);
+            snprintf(req, sizeof(req), "CRATEDIG_SEARCH\t%d\n", SEARCH_MAX_RESULTS);
         } else {
             snprintf(req, sizeof(req), "SEARCH\t%s\t%d\t%s\n", clean_provider, SEARCH_MAX_RESULTS, clean_query);
         }
@@ -1176,12 +1180,12 @@ static int run_search_command_daemon(yt_instance_t *inst,
                     snprintf(results[count].channel, sizeof(results[count].channel), "%s", field_count >= 4 ? fields[3] : "");
                     snprintf(results[count].duration, sizeof(results[count].duration), "%s", field_count >= 5 ? fields[4] : "");
                     snprintf(results[count].provider, sizeof(results[count].provider), "%s",
-                             is_samplette ? "youtube" : clean_provider);
+                             is_cratedig ? "youtube" : clean_provider);
                     sanitize_display_text(results[count].title);
                     sanitize_display_text(results[count].channel);
                     sanitize_display_text(results[count].duration);
 
-                    /* Extended metadata fields (positions 6-12) from samplette */
+                    /* Extended metadata fields (positions 6-12) from cratedig/samplette */
                     snprintf(results[count].meta_key, sizeof(results[count].meta_key), "%s", field_count >= 7 ? fields[6] : "");
                     snprintf(results[count].meta_scale, sizeof(results[count].meta_scale), "%s", field_count >= 8 ? fields[7] : "");
                     snprintf(results[count].meta_tempo, sizeof(results[count].meta_tempo), "%s", field_count >= 9 ? fields[8] : "");
@@ -1195,7 +1199,7 @@ static int run_search_command_daemon(yt_instance_t *inst,
 
                     if (field_count >= 6) {
                         item_url = fields[5];
-                    } else if (strcmp(clean_provider, "youtube") == 0 || is_samplette) {
+                    } else if (strcmp(clean_provider, "youtube") == 0 || is_cratedig) {
                         snprintf(fallback_url, sizeof(fallback_url), "https://www.youtube.com/watch?v=%s", results[count].id);
                         item_url = fallback_url;
                     }
@@ -1739,10 +1743,10 @@ static void start_prefetch_next(yt_instance_t *inst) {
     int next_idx;
     char next_url[SEARCH_URL_MAX];
 
-    if (!inst || !inst->samplette_auto_advance) return;
+    if (!inst || !inst->cratedig_auto_advance) return;
 
     pthread_mutex_lock(&inst->search_mutex);
-    next_idx = inst->samplette_result_index + 1;
+    next_idx = inst->cratedig_result_index + 1;
     if (next_idx < inst->search_count) {
         snprintf(next_url, sizeof(next_url), "%s", inst->search_results[next_idx].url);
     } else {
@@ -2164,9 +2168,9 @@ static void v2_set_param(void *instance, const char *key, const char *val) {
             allow_trigger(&inst->last_next_track_ms, DEBOUNCE_PLAY_PAUSE_MS)) {
             pthread_mutex_lock(&inst->search_mutex);
             if (inst->search_count > 0) {
-                int next_idx = inst->samplette_result_index + 1;
+                int next_idx = inst->cratedig_result_index + 1;
                 if (next_idx >= inst->search_count) next_idx = 0;
-                inst->samplette_result_index = next_idx;
+                inst->cratedig_result_index = next_idx;
                 if (next_idx < inst->search_count) {
                     char next_url[SEARCH_URL_MAX];
                     snprintf(next_url, sizeof(next_url), "%s", inst->search_results[next_idx].url);
@@ -2194,26 +2198,26 @@ static void v2_set_param(void *instance, const char *key, const char *val) {
         return;
     }
 
-    if (strcmp(key, "samplette_result_index") == 0) {
+    if (strcmp(key, "cratedig_result_index") == 0) {
         int idx = (int)strtol(val, NULL, 10);
         if (idx >= 0 && idx < SEARCH_MAX_RESULTS) {
-            inst->samplette_result_index = idx;
+            inst->cratedig_result_index = idx;
         }
         return;
     }
 
-    if (strcmp(key, "samplette_auto_advance") == 0) {
-        inst->samplette_auto_advance = (strcmp(val, "1") == 0 || strcmp(val, "true") == 0);
+    if (strcmp(key, "cratedig_auto_advance") == 0) {
+        inst->cratedig_auto_advance = (strcmp(val, "1") == 0 || strcmp(val, "true") == 0);
         return;
     }
 
-    if (strcmp(key, "samplette_filter") == 0) {
+    if (strcmp(key, "cratedig_filter") == 0) {
         /* Stash filter for the search thread to send (non-blocking) */
         pthread_mutex_lock(&inst->search_mutex);
-        snprintf(inst->samplette_pending_filter, sizeof(inst->samplette_pending_filter), "%s", val);
-        snprintf(inst->search_provider, sizeof(inst->search_provider), "samplette");
-        inst->samplette_result_index = 0;
-        (void)start_search_async(inst, "samplette");
+        snprintf(inst->cratedig_pending_filter, sizeof(inst->cratedig_pending_filter), "%s", val);
+        snprintf(inst->search_provider, sizeof(inst->search_provider), "cratedig");
+        inst->cratedig_result_index = 0;
+        (void)start_search_async(inst, "cratedig");
         pthread_mutex_unlock(&inst->search_mutex);
         return;
     }
@@ -2286,11 +2290,11 @@ static int v2_get_param(void *instance, const char *key, char *buf, int buf_len)
     if (strcmp(key, "next_track_step") == 0) {
         return snprintf(buf, (size_t)buf_len, "idle");
     }
-    if (strcmp(key, "samplette_result_index") == 0) {
-        return snprintf(buf, (size_t)buf_len, "%d", inst ? inst->samplette_result_index : 0);
+    if (strcmp(key, "cratedig_result_index") == 0) {
+        return snprintf(buf, (size_t)buf_len, "%d", inst ? inst->cratedig_result_index : 0);
     }
-    if (strcmp(key, "samplette_auto_advance") == 0) {
-        return snprintf(buf, (size_t)buf_len, "%s", (inst && inst->samplette_auto_advance) ? "1" : "0");
+    if (strcmp(key, "cratedig_auto_advance") == 0) {
+        return snprintf(buf, (size_t)buf_len, "%s", (inst && inst->cratedig_auto_advance) ? "1" : "0");
     }
     if (strcmp(key, "stream_url") == 0) {
         return snprintf(buf, (size_t)buf_len, "%s", inst ? inst->stream_url : "");
@@ -2516,13 +2520,13 @@ static void v2_render_block(void *instance, int16_t *out_interleaved_lr, int fra
     out_interleaved_lr[0] = 5;
 
     if (inst->stream_eof) {
-        if (inst->samplette_auto_advance) {
+        if (inst->cratedig_auto_advance) {
             int next_idx;
             pthread_mutex_lock(&inst->search_mutex);
-            next_idx = inst->samplette_result_index + 1;
+            next_idx = inst->cratedig_result_index + 1;
             if (next_idx < inst->search_count) {
                 char next_url[SEARCH_URL_MAX];
-                inst->samplette_result_index = next_idx;
+                inst->cratedig_result_index = next_idx;
                 snprintf(next_url, sizeof(next_url), "%s", inst->search_results[next_idx].url);
                 pthread_mutex_unlock(&inst->search_mutex);
                 stop_stream(inst);
