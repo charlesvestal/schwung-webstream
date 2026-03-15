@@ -33,6 +33,8 @@ def normalize_provider(raw: str) -> str:
         return "archive"
     if p in ("sc", "soundcloud"):
         return "soundcloud"
+    if p in ("cd", "cratedig"):
+        return "cratedig"
     return p
 
 
@@ -702,6 +704,150 @@ class SampletteSession:
         return data
 
 
+class CrateDigSession:
+    DISCOGS_BASE = "https://api.discogs.com"
+    MAX_EXCLUDE_IDS = 200
+    USER_AGENT = "MoveAnythingWebstream/1.0 +https://github.com/charlesvestal/move-anything-webstream"
+
+    def __init__(self):
+        self.filter_genre = ""
+        self.filter_style = ""
+        self.filter_decade = ""
+        self.filter_country = ""
+        self.exclude_ids: list = []
+        self.pool_size_cache: dict = {}
+
+    def _request(self, path: str, params: dict = None) -> dict:
+        url = f"{self.DISCOGS_BASE}{path}"
+        if params:
+            url += "?" + urllib.parse.urlencode(params, doseq=True)
+        req = urllib.request.Request(url, headers={"User-Agent": self.USER_AGENT})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return json.loads(resp.read().decode("utf-8", errors="replace"))
+
+    def set_filter(self, filter_json: str):
+        data = json.loads(filter_json)
+        self.filter_genre = data.get("genre", "")
+        self.filter_style = data.get("style", "")
+        self.filter_decade = data.get("decade", "")
+        self.filter_country = data.get("country", "")
+        self.exclude_ids = []
+        self.pool_size_cache = {}
+
+    def _build_search_params(self) -> dict:
+        params = {"type": "release", "per_page": "5"}
+        if self.filter_genre:
+            params["genre"] = self.filter_genre
+        if self.filter_style:
+            params["style"] = self.filter_style
+        if self.filter_country:
+            params["country"] = self.filter_country
+        if self.filter_decade:
+            decade = self.filter_decade.replace("s", "")
+            try:
+                start = int(decade)
+                params["year"] = f"{start}-{start + 9}"
+            except Exception:
+                pass
+        return params
+
+    def _cache_key(self) -> str:
+        return f"{self.filter_genre}|{self.filter_style}|{self.filter_decade}|{self.filter_country}"
+
+    def _get_pool_size(self, params: dict) -> int:
+        key = self._cache_key()
+        if key in self.pool_size_cache:
+            return self.pool_size_cache[key]
+        probe = dict(params)
+        probe["per_page"] = "1"
+        probe["page"] = "1"
+        data = self._request("/database/search", probe)
+        pagination = data.get("pagination", {})
+        pages = pagination.get("pages", 0)
+        pages = min(pages, 10000)
+        self.pool_size_cache[key] = pages
+        return pages
+
+    def get_random_releases(self, count: int = 10) -> list:
+        import random
+        params = self._build_search_params()
+        pool_size = self._get_pool_size(params)
+        if pool_size == 0:
+            return []
+
+        found = []
+        attempts = 0
+        max_attempts = count * 4
+
+        while len(found) < count and attempts < max_attempts:
+            attempts += 1
+            page = random.randint(1, pool_size)
+            params["page"] = str(page)
+            params["per_page"] = "5"
+
+            try:
+                data = self._request("/database/search", params)
+            except Exception:
+                continue
+
+            results = data.get("results", [])
+            if not results:
+                continue
+
+            entry = results[random.randint(0, len(results) - 1)]
+            release_id = entry.get("id")
+            if not release_id or release_id in self.exclude_ids:
+                continue
+
+            try:
+                release = self._request(f"/releases/{release_id}")
+            except Exception:
+                continue
+
+            videos = release.get("videos", [])
+            if not videos:
+                continue
+
+            video = videos[random.randint(0, len(videos) - 1)]
+            video_url = video.get("uri", "")
+            if not video_url or "youtube.com" not in video_url:
+                youtube_videos = [v for v in videos if "youtube.com" in (v.get("uri") or "")]
+                if not youtube_videos:
+                    continue
+                video = youtube_videos[random.randint(0, len(youtube_videos) - 1)]
+                video_url = video.get("uri", "")
+
+            artists = release.get("artists", [])
+            artist_name = artists[0].get("name", "") if artists else ""
+            title = release.get("title", "")
+            year = str(release.get("year") or "")
+            country = release.get("country") or ""
+            genres = release.get("genres") or []
+            styles = release.get("styles") or []
+            genre_str = ", ".join(genres) if isinstance(genres, list) else ""
+            style_str = ", ".join(styles) if isinstance(styles, list) else ""
+            video_title = video.get("title", f"{artist_name} - {title}")
+            video_duration = video.get("duration")
+
+            self.exclude_ids.append(release_id)
+            if len(self.exclude_ids) > self.MAX_EXCLUDE_IDS:
+                self.exclude_ids = self.exclude_ids[-self.MAX_EXCLUDE_IDS:]
+
+            found.append({
+                "id": str(release_id),
+                "title": video_title,
+                "channel": artist_name,
+                "duration": video_duration,
+                "url": video_url,
+                "genre": genre_str,
+                "style": style_str,
+                "country": country,
+                "year": year,
+            })
+
+        return found
+
+
 def samplette_init(session: SampletteSession) -> None:
     session.init_session()
     genres = session.get_lov("/genres_lov")
@@ -770,6 +916,50 @@ def samplette_search(session: SampletteSession, count_text: str) -> None:
     write_fields("SEARCH_END", str(n))
 
 
+def cratedig_init(session: CrateDigSession) -> None:
+    write_fields("CRATEDIG_OK")
+
+
+def cratedig_filter(session: CrateDigSession, filter_json: str) -> None:
+    session.set_filter(filter_json)
+    write_fields("CRATEDIG_OK")
+
+
+def cratedig_search(session: CrateDigSession, count_text: str) -> None:
+    try:
+        count = int(count_text)
+    except Exception:
+        count = 10
+    if count < 1:
+        count = 1
+    if count > 20:
+        count = 20
+
+    releases = session.get_random_releases(count)
+
+    n = 0
+    write_fields("SEARCH_BEGIN")
+    for item in releases:
+        sid = clean_field(item.get("id") or "")
+        title = clean_field(item.get("title") or "")
+        channel = clean_field(item.get("channel") or "")
+        duration = format_duration(item.get("duration"))
+        url = clean_field(item.get("url") or "")
+        genre = clean_field(item.get("genre") or "")
+        style = clean_field(item.get("style") or "")
+        country = clean_field(item.get("country") or "")
+        year = clean_field(item.get("year") or "")
+
+        if not title or not url:
+            continue
+
+        write_fields("SEARCH_ITEM", sid, title, channel, duration, url,
+                     "", "", "", genre, style, country, year)
+        n += 1
+
+    write_fields("SEARCH_END", str(n))
+
+
 def parse_search_parts(parts: list):
     if len(parts) >= 4:
         provider = parts[1]
@@ -807,6 +997,7 @@ def main() -> int:
         yt_dlp_mod = None
 
     samplette = SampletteSession()
+    cratedig = CrateDigSession()
 
     write_fields("READY")
 
@@ -834,6 +1025,14 @@ def main() -> int:
             elif cmd == "SAMPLETTE_SEARCH":
                 count_text = parts[1] if len(parts) > 1 else "10"
                 samplette_search(samplette, count_text)
+            elif cmd == "CRATEDIG_INIT":
+                cratedig_init(cratedig)
+            elif cmd == "CRATEDIG_FILTER":
+                filter_json = "\t".join(parts[1:]) if len(parts) > 1 else "{}"
+                cratedig_filter(cratedig, filter_json)
+            elif cmd == "CRATEDIG_SEARCH":
+                count_text = parts[1] if len(parts) > 1 else "10"
+                cratedig_search(cratedig, count_text)
             elif cmd == "QUIT":
                 write_fields("BYE")
                 break
