@@ -27,8 +27,8 @@ const MAX_MENU_RESULTS = 20;
 const MAX_SEARCH_HISTORY = 20;
 const SEARCH_HISTORY_PATH = '/data/UserData/schwung/config/webstream_search_history.json';
 const CRATEDIG_FILTER_PATH = '/data/UserData/schwung/config/webstream_cratedig_filter.json';
-const LEGACY_SEARCH_HISTORY_PATH = '/data/UserData/move-anything/webstream_search_history.json';
-const LEGACY_SEARCH_HISTORY_PATH_2 = '/data/UserData/move-anything/yt_search_history.json';
+const LEGACY_SEARCH_HISTORY_PATH = '/data/UserData/schwung/webstream_search_history.json';
+const LEGACY_SEARCH_HISTORY_PATH_2 = '/data/UserData/schwung/yt_search_history.json';
 const SPINNER = ['-', '/', '|', '\\'];
 const PROVIDERS = [
   { id: 'youtube', label: 'YouTube' },

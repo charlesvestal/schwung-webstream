@@ -36,7 +36,7 @@
 #define DAEMON_START_TIMEOUT_MS 12000
 #define DAEMON_SEARCH_TIMEOUT_MS 12000
 #define DAEMON_RESOLVE_TIMEOUT_MS 12000
-#define WS_RUNTIME_LOG_PATH "/data/UserData/move-anything/cache/webstream-runtime.log"
+#define WS_RUNTIME_LOG_PATH "/data/UserData/schwung/cache/webstream-runtime.log"
 
 static const host_api_v1_t *g_host = NULL;
 

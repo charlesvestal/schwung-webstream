@@ -260,7 +260,7 @@ def resolve_request_ytdlp(yt_dlp_mod, provider: str, source_url: str) -> None:
 def load_provider_config() -> dict:
     path = os.environ.get(
         "WEBSTREAM_PROVIDER_CONFIG",
-        "/data/UserData/move-anything/config/webstream_providers.json",
+        "/data/UserData/schwung/config/webstream_providers.json",
     )
     try:
         with open(path, "r", encoding="utf-8") as f:
