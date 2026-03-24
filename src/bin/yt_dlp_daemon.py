@@ -727,13 +727,18 @@ class CrateDigSession:
         if self.token:
             headers["Authorization"] = f"Discogs token={self.token}"
         req = urllib.request.Request(url, headers=headers)
-        for attempt in range(2):
+        for attempt in range(3):
             try:
                 with urllib.request.urlopen(req, timeout=10) as resp:
                     return json.loads(resp.read().decode("utf-8", errors="replace"))
             except urllib.error.HTTPError as exc:
-                if exc.code == 429 and attempt < 1:
+                if exc.code == 429 and attempt < 2:
                     time.sleep(3)
+                    continue
+                raise
+            except urllib.error.URLError as exc:
+                if attempt < 2:
+                    time.sleep(1)
                     continue
                 raise
 
@@ -780,22 +785,25 @@ class CrateDigSession:
     def _get_pool_size_and_first_page(self, params: dict):
         """Returns (pool_pages, first_page_results, first_page_number).
         Caches pool size; first page data is only returned on cache miss."""
+        import random
         key = self._cache_key()
         if key in self.pool_size_cache:
             return self.pool_size_cache[key], None, None
-        import random
-        page = random.randint(1, 100)  # pick a random page (may overshoot, handled below)
+        # Probe page 1 first to learn the actual page count
         probe = dict(params)
-        probe["page"] = str(page)
+        probe["page"] = "1"
         data = self._request("/database/search", probe)
         pagination = data.get("pagination", {})
-        pages = pagination.get("pages", 0)
+        pages = min(pagination.get("pages", 0), 100)  # Discogs caps at 100
         self.pool_size_cache[key] = pages
-        if page > pages:
-            # Overshot — retry with valid page
-            page = random.randint(1, pages) if pages > 0 else 1
-            probe["page"] = str(page)
-            data = self._request("/database/search", probe)
+        if pages <= 1:
+            return pages, data.get("results", []), 1
+        # Pick a random page for variety (we already have page 1)
+        page = random.randint(1, pages)
+        if page == 1:
+            return pages, data.get("results", []), 1
+        probe["page"] = str(page)
+        data = self._request("/database/search", probe)
         return pages, data.get("results", []), page
 
     def get_random_releases(self, count: int = 5) -> list:
