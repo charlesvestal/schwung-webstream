@@ -92,9 +92,24 @@ const CRATEDIG_DECADES = [
 ];
 
 const CRATEDIG_COUNTRIES = [
-  'Any', 'US', 'UK', 'Jamaica', 'Brazil', 'Japan', 'Nigeria', 'France',
-  'Germany', 'Italy', 'Cuba', 'Colombia', 'India', 'South Africa',
-  'Ethiopia', 'Ghana', 'Senegal', 'Mexico', 'Argentina', 'Australia'
+  'Any',
+  // Americas
+  'US', 'Canada', 'Mexico', 'Brazil', 'Argentina', 'Colombia', 'Cuba', 'Jamaica',
+  'Puerto Rico', 'Venezuela', 'Chile', 'Peru', 'Trinidad & Tobago', 'Haiti',
+  // Europe
+  'UK', 'France', 'Germany', 'Italy', 'Spain', 'Netherlands', 'Belgium', 'Sweden',
+  'Norway', 'Denmark', 'Finland', 'Iceland', 'Portugal', 'Greece', 'Turkey',
+  'Poland', 'Czech Republic', 'Austria', 'Switzerland', 'Ireland', 'Romania',
+  'Hungary', 'Serbia', 'Croatia', 'Bulgaria', 'Ukraine', 'Russia',
+  // Africa
+  'Nigeria', 'South Africa', 'Ethiopia', 'Ghana', 'Senegal', 'Kenya',
+  'Tanzania', 'Congo', 'Mali', 'Cameroon', 'Benin', 'Ivory Coast',
+  'Zimbabwe', 'Morocco', 'Algeria', 'Egypt', 'Cape Verde', 'Guinea',
+  // Asia
+  'Japan', 'South Korea', 'India', 'Indonesia', 'Philippines', 'Thailand',
+  'Vietnam', 'China', 'Taiwan', 'Pakistan', 'Iran', 'Israel', 'Lebanon',
+  // Oceania
+  'Australia', 'New Zealand'
 ];
 
 let cratedigFilter = {

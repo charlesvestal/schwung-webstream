@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crate Dig</title>
+<style>
+  :root {
+    --bg: #121212;
+    --surface: #1e1e1e;
+    --surface2: #2a2a2a;
+    --accent: #e2b74b;
+    --accent-dim: #8a6f2e;
+    --text: #e0e0e0;
+    --text-dim: #888;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  header {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+  }
+  header h1 {
+    font-size: 2.2rem;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+  }
+  header p {
+    color: var(--text-dim);
+    margin-top: 0.3rem;
+    font-size: 0.9rem;
+  }
+
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: center;
+    padding: 1rem;
+    max-width: 800px;
+    width: 100%;
+  }
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1 1 160px;
+    min-width: 140px;
+  }
+  .filter-group label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+  .filter-group select {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid #444;
+    border-radius: var(--radius);
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23888'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+  }
+  .filter-group select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.6rem;
+    padding: 0 1rem 1rem;
+    justify-content: center;
+  }
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .dig-btn {
+    background: var(--accent);
+    color: #111;
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.7rem 2.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .dig-btn:hover { background: #f0c95e; }
+  .dig-btn:active { transform: scale(0.97); }
+  .dig-btn:disabled {
+    background: var(--accent-dim);
+    cursor: wait;
+  }
+  .next-btn {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid #444;
+    border-radius: var(--radius);
+    padding: 0.7rem 1.5rem;
+    font-size: 1rem;
+    transition: border-color 0.15s;
+  }
+  .next-btn:hover { border-color: var(--accent); }
+  .next-btn:disabled { opacity: 0.4; cursor: default; }
+
+  .status {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    text-align: center;
+    min-height: 1.4em;
+    padding: 0 1rem;
+  }
+  .status.error { color: #e25555; }
+
+  .player-area {
+    width: 100%;
+    max-width: 800px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .video-container {
+    position: relative;
+    padding-bottom: 56.25%;
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .video-container iframe {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border: 0;
+  }
+  .video-placeholder {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-size: 1.1rem;
+  }
+
+  .track-info {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 1rem;
+    display: none;
+  }
+  .track-info.visible { display: block; }
+  .track-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+  .track-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .tag {
+    background: var(--surface2);
+    border-radius: 4px;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+  .tag .tag-label {
+    color: var(--accent);
+    margin-right: 0.2rem;
+  }
+
+  .history {
+    width: 100%;
+    max-width: 800px;
+    padding: 0 1rem 2rem;
+  }
+  .history h3 {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+  }
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .history-item {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.8rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.15s;
+    font-size: 0.9rem;
+  }
+  .history-item:hover { background: var(--surface2); }
+  .history-item .hi-title { flex: 1; }
+  .history-item .hi-tags {
+    display: flex;
+    gap: 0.3rem;
+    margin-left: 0.5rem;
+  }
+  .history-item .hi-tag {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+
+  .token-area {
+    text-align: center;
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+  .token-area a { color: var(--accent-dim); }
+  .token-link { cursor: pointer; text-decoration: underline; }
+  .token-input-area {
+    display: none;
+    margin-top: 0.4rem;
+    gap: 0.4rem;
+    align-items: center;
+    justify-content: center;
+  }
+  .token-input-area.visible { display: flex; }
+  .token-input-area input {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid #444;
+    border-radius: var(--radius);
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+    width: 260px;
+  }
+  .token-input-area button {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 500px) {
+    header h1 { font-size: 1.6rem; }
+    .filter-group { flex: 1 1 100%; }
+    .dig-btn { width: 100%; }
+    .next-btn { flex: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Crate Dig</h1>
+  <p>Random music discovery powered by Discogs</p>
+</header>
+
+<div class="filters">
+  <div class="filter-group">
+    <label>Genre</label>
+    <select id="genre"></select>
+  </div>
+  <div class="filter-group">
+    <label>Style</label>
+    <select id="style"></select>
+  </div>
+  <div class="filter-group">
+    <label>Decade</label>
+    <select id="decade"></select>
+  </div>
+  <div class="filter-group">
+    <label>Country</label>
+    <select id="country"></select>
+  </div>
+</div>
+
+<div class="actions">
+  <button class="dig-btn" id="digBtn" onclick="dig()">Dig!</button>
+  <button class="next-btn" id="nextBtn" onclick="nextTrack()" disabled>Next</button>
+</div>
+
+<div class="status" id="status"></div>
+
+<div class="player-area">
+  <div class="video-container" id="videoContainer">
+    <div class="video-placeholder" id="placeholder">Select filters and hit Dig!</div>
+  </div>
+  <div class="track-info" id="trackInfo">
+    <div class="track-title" id="trackTitle"></div>
+    <div class="track-meta" id="trackMeta"></div>
+  </div>
+</div>
+
+<div class="history" id="historySection" style="display:none">
+  <h3>History</h3>
+  <div class="history-list" id="historyList"></div>
+</div>
+
+<div class="token-area">
+  <span class="token-link" onclick="toggleToken()">Discogs token (optional, for higher rate limits)</span>
+  <div class="token-input-area" id="tokenArea">
+    <input type="text" id="tokenInput" placeholder="Your Discogs personal access token">
+    <button onclick="saveToken()">Save</button>
+  </div>
+</div>
+
+<script>
+const GENRES = [
+  'Any', 'Blues', 'Brass & Military', "Children's", 'Classical',
+  'Electronic', 'Folk, World, & Country', 'Funk / Soul', 'Hip Hop',
+  'Jazz', 'Latin', 'Non-Music', 'Pop', 'Reggae', 'Rock', 'Stage & Screen'
+];
+
+const STYLES = {
+  'Blues': ['Any', 'Chicago Blues', 'Country Blues', 'Delta Blues', 'Electric Blues', 'Harmonica Blues', 'Jump Blues', 'Louisiana Blues', 'Modern Electric Blues', 'Piano Blues', 'Rhythm & Blues', 'Texas Blues'],
+  'Brass & Military': ['Any', 'Brass Band', 'Marches', 'Military'],
+  "Children's": ['Any', 'Educational', 'Nursery Rhymes', 'Story'],
+  'Classical': ['Any', 'Baroque', 'Classical', 'Contemporary', 'Impressionist', 'Medieval', 'Modern', 'Neo-Classical', 'Neo-Romantic', 'Opera', 'Post-Modern', 'Renaissance', 'Romantic'],
+  'Electronic': ['Any', 'Abstract', 'Acid', 'Acid House', 'Acid Jazz', 'Ambient', 'Breakbeat', 'Breakcore', 'Breaks', 'Dark Ambient', 'Deep House', 'Disco', 'Downtempo', 'Drone', 'Dub Techno', 'Electro', 'Experimental', 'Garage House', 'House', 'IDM', 'Industrial', 'Jungle', 'Leftfield', 'Minimal', 'Musique Concrète', 'Noise', 'Nu-Disco', 'Synth-pop', 'Techno', 'Trance', 'Trip Hop'],
+  'Folk, World, & Country': ['Any', 'African', 'Afrobeat', 'Bluegrass', 'Cajun', 'Celtic', 'Country', 'Fado', 'Flamenco', 'Folk', 'Gospel', 'Highlife', 'Hindustani', 'Honky Tonk', 'Indian Classical', 'Klezmer', 'Nordic', 'Pacific', 'Polka', 'Raï', 'Rockabilly', 'Soca', 'Soukous', 'Zydeco'],
+  'Funk / Soul': ['Any', 'Afrobeat', 'Boogie', 'Contemporary R&B', 'Disco', 'Free Funk', 'Funk', 'Gospel', 'Neo Soul', 'New Jack Swing', 'Northern Soul', 'P.Funk', 'Psychedelic', 'Rhythm & Blues', 'Soul', 'Swingbeat'],
+  'Hip Hop': ['Any', 'Bass Music', 'Boom Bap', 'Conscious', 'Crunk', 'Cut-up/DJ', 'Electro', 'G-Funk', 'Gangsta', 'Grime', 'Hardcore Hip-Hop', 'Instrumental', 'Jazz-Funk', 'Pop Rap', 'RnB/Swing', 'Thug Rap', 'Trip Hop', 'Turntablism'],
+  'Jazz': ['Any', 'Afro-Cuban Jazz', 'Avant-garde Jazz', 'Bebop', 'Big Band', 'Bop', 'Bossa Nova', 'Cool Jazz', 'Dixieland', 'Free Improvisation', 'Free Jazz', 'Fusion', 'Gypsy Jazz', 'Hard Bop', 'Jazz-Funk', 'Jazz-Rock', 'Latin Jazz', 'Modal', 'Post Bop', 'Ragtime', 'Smooth Jazz', 'Soul-Jazz', 'Space-Age', 'Swing'],
+  'Latin': ['Any', 'Baião', 'Batucada', 'Bolero', 'Boogaloo', 'Bossa Nova', 'Cha-Cha', 'Charanga', 'Compas', 'Cumbia', 'Descarga', 'Forró', 'Guaracha', 'MPB', 'Mambo', 'Merengue', 'Norteño', 'Plena', 'Rumba', 'Salsa', 'Samba', 'Son', 'Tango', 'Tejano', 'Tropicália', 'Vallenato'],
+  'Non-Music': ['Any', 'Audiobook', 'Comedy', 'Dialogue', 'Education', 'Field Recording', 'Interview', 'Monolog', 'Poetry', 'Political', 'Propaganda', 'Radioplay', 'Religious', 'Spoken Word'],
+  'Pop': ['Any', 'Ballad', 'Baroque Pop', 'Britpop', 'Bubblegum', 'Chanson', 'City Pop', 'Dance-pop', 'Dream Pop', 'Europop', 'Indie Pop', 'J-pop', 'K-pop', 'New Wave', 'Power Pop', 'Schlager', 'Shoegaze', 'Sunshine Pop', 'Synth-pop', 'Teen Pop', 'Vocal'],
+  'Reggae': ['Any', 'Calypso', 'Dancehall', 'Dub', 'Lovers Rock', 'Ragga', 'Reggae', 'Reggae-Pop', 'Rocksteady', 'Roots Reggae', 'Ska', 'Soca'],
+  'Rock': ['Any', 'Acid Rock', 'Alternative Rock', 'Arena Rock', 'Art Rock', 'Blues Rock', 'Classic Rock', 'Doom Metal', 'Garage Rock', 'Glam', 'Grunge', 'Hard Rock', 'Indie Rock', 'Krautrock', 'Lo-Fi', 'Math Rock', 'Mod', 'Noise', 'Post-Punk', 'Post Rock', 'Prog Rock', 'Psychedelic Rock', 'Pub Rock', 'Punk', 'Shoegaze', 'Space Rock', 'Stoner Rock', 'Surf'],
+  'Stage & Screen': ['Any', 'Musical', 'Score', 'Soundtrack', 'Theme']
+};
+
+const DECADES = ['Any', '1920s', '1930s', '1940s', '1950s', '1960s', '1970s', '1980s', '1990s', '2000s', '2010s', '2020s'];
+
+const COUNTRIES = [
+  'Any',
+  // Americas
+  'US', 'Canada', 'Mexico', 'Brazil', 'Argentina', 'Colombia', 'Cuba', 'Jamaica',
+  'Puerto Rico', 'Venezuela', 'Chile', 'Peru', 'Trinidad & Tobago', 'Haiti',
+  // Europe
+  'UK', 'France', 'Germany', 'Italy', 'Spain', 'Netherlands', 'Belgium', 'Sweden',
+  'Norway', 'Denmark', 'Finland', 'Iceland', 'Portugal', 'Greece', 'Turkey',
+  'Poland', 'Czech Republic', 'Austria', 'Switzerland', 'Ireland', 'Romania',
+  'Hungary', 'Serbia', 'Croatia', 'Bulgaria', 'Ukraine', 'Russia',
+  // Africa
+  'Nigeria', 'South Africa', 'Ethiopia', 'Ghana', 'Senegal', 'Kenya',
+  'Tanzania', 'Congo', 'Mali', 'Cameroon', 'Benin', 'Ivory Coast',
+  'Zimbabwe', 'Morocco', 'Algeria', 'Egypt', 'Cape Verde', 'Guinea',
+  // Asia
+  'Japan', 'South Korea', 'India', 'Indonesia', 'Philippines', 'Thailand',
+  'Vietnam', 'China', 'Taiwan', 'Pakistan', 'Iran', 'Israel', 'Lebanon',
+  // Oceania
+  'Australia', 'New Zealand'
+];
+
+const DISCOGS_BASE = 'https://api.discogs.com';
+const USER_AGENT = 'CrateDigWeb/1.0';
+const MAX_EXCLUDE = 200;
+
+let excludeIds = [];
+let poolCache = {};
+let results = [];
+let resultIndex = 0;
+let digging = false;
+
+function getToken() {
+  return localStorage.getItem('discogs_token') || '';
+}
+
+function toggleToken() {
+  const el = document.getElementById('tokenArea');
+  el.classList.toggle('visible');
+  if (el.classList.contains('visible')) {
+    document.getElementById('tokenInput').value = getToken();
+  }
+}
+
+function saveToken() {
+  const val = document.getElementById('tokenInput').value.trim();
+  if (val) localStorage.setItem('discogs_token', val);
+  else localStorage.removeItem('discogs_token');
+  document.getElementById('tokenArea').classList.remove('visible');
+  // Clear caches when token changes
+  poolCache = {};
+}
+
+// --- Populate filter dropdowns ---
+function populate(id, items) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = items.map(i => `<option value="${i === 'Any' ? '' : i}">${i}</option>`).join('');
+}
+
+function populateStyles() {
+  const genre = document.getElementById('genre').value;
+  const styleSel = document.getElementById('style');
+  if (genre && STYLES[genre]) {
+    styleSel.disabled = false;
+    populate('style', STYLES[genre]);
+  } else {
+    styleSel.disabled = !genre;
+    styleSel.innerHTML = '<option value="">Any</option>';
+  }
+}
+
+populate('genre', GENRES);
+populate('decade', DECADES);
+populate('country', COUNTRIES);
+populateStyles();
+document.getElementById('genre').addEventListener('change', () => {
+  populateStyles();
+  poolCache = {};
+});
+document.getElementById('style').addEventListener('change', () => { poolCache = {}; });
+document.getElementById('decade').addEventListener('change', () => { poolCache = {}; });
+document.getElementById('country').addEventListener('change', () => { poolCache = {}; });
+
+// --- Discogs API ---
+async function discogsRequest(path, params = {}) {
+  let url = DISCOGS_BASE + path;
+  const qs = new URLSearchParams(params).toString();
+  if (qs) url += '?' + qs;
+  const headers = { 'User-Agent': USER_AGENT };
+  const token = getToken();
+  if (token) headers['Authorization'] = `Discogs token=${token}`;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const resp = await fetch(url, { headers });
+    if (resp.status === 429 && attempt < 2) {
+      await new Promise(r => setTimeout(r, 3000));
+      continue;
+    }
+    if (!resp.ok) throw new Error(`Discogs API error: ${resp.status}`);
+    return resp.json();
+  }
+}
+
+function buildSearchParams() {
+  const params = { type: 'release', per_page: '100' };
+  const genre = document.getElementById('genre').value;
+  const style = document.getElementById('style').value;
+  const decade = document.getElementById('decade').value;
+  const country = document.getElementById('country').value;
+  if (genre) params.genre = genre;
+  if (style) params.style = style;
+  if (country) params.country = country;
+  if (decade) {
+    const start = parseInt(decade.replace('s', ''));
+    if (!isNaN(start)) params.year = `${start}-${start + 9}`;
+  }
+  return params;
+}
+
+function cacheKey() {
+  return [
+    document.getElementById('genre').value,
+    document.getElementById('style').value,
+    document.getElementById('decade').value,
+    document.getElementById('country').value
+  ].join('|');
+}
+
+async function getPoolAndFirstPage(params) {
+  const key = cacheKey();
+  if (poolCache[key]) return { poolSize: poolCache[key], firstResults: null };
+
+  const probe = { ...params, page: '1' };
+  const data = await discogsRequest('/database/search', probe);
+  const pages = Math.min(data.pagination?.pages || 0, 100);
+  poolCache[key] = pages;
+
+  if (pages <= 1) return { poolSize: pages, firstResults: data.results || [] };
+
+  const page = Math.floor(Math.random() * pages) + 1;
+  if (page === 1) return { poolSize: pages, firstResults: data.results || [] };
+
+  const data2 = await discogsRequest('/database/search', { ...params, page: String(page) });
+  return { poolSize: pages, firstResults: data2.results || [] };
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function extractYouTubeId(url) {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+  return m ? m[1] : null;
+}
+
+function setStatus(msg, isError) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status' + (isError ? ' error' : '');
+}
+
+async function dig() {
+  if (digging) return;
+  digging = true;
+  const btn = document.getElementById('digBtn');
+  btn.disabled = true;
+  btn.textContent = 'Digging...';
+  document.getElementById('nextBtn').disabled = true;
+  setStatus('Searching Discogs...');
+
+  try {
+    const params = buildSearchParams();
+    const { poolSize, firstResults } = await getPoolAndFirstPage(params);
+
+    if (poolSize === 0) {
+      setStatus('No results found for these filters. Try broadening your search.', true);
+      return;
+    }
+
+    const count = 5;
+    const found = [];
+    const seenPages = new Set();
+    let releaseLookups = 0;
+    const maxPageFetches = 3;
+    const maxReleaseLookups = count * 4;
+
+    let pagesData = [];
+    if (firstResults) {
+      pagesData.push(firstResults);
+    }
+
+    while (found.length < count && seenPages.size < maxPageFetches && releaseLookups < maxReleaseLookups) {
+      let entries;
+      if (pagesData.length) {
+        entries = pagesData.shift();
+      } else {
+        const page = Math.floor(Math.random() * poolSize) + 1;
+        if (seenPages.has(page)) continue;
+        seenPages.add(page);
+        setStatus(`Searching page ${seenPages.size}...`);
+        try {
+          const data = await discogsRequest('/database/search', { ...params, page: String(page) });
+          entries = data.results || [];
+        } catch { continue; }
+        if (!entries.length) continue;
+      }
+
+      shuffle(entries);
+      for (const entry of entries) {
+        if (found.length >= count || releaseLookups >= maxReleaseLookups) break;
+        const releaseId = entry.id;
+        if (!releaseId || excludeIds.includes(releaseId)) continue;
+
+        releaseLookups++;
+        setStatus(`Checking release ${releaseLookups}...`);
+        try {
+          const release = await discogsRequest(`/releases/${releaseId}`);
+          const videos = release.videos || [];
+          const ytVideos = videos.filter(v => v.uri && v.uri.includes('youtube.com'));
+          if (!ytVideos.length) continue;
+
+          const video = ytVideos[Math.floor(Math.random() * ytVideos.length)];
+          const videoId = extractYouTubeId(video.uri);
+          if (!videoId) continue;
+
+          const artists = release.artists || [];
+          const artistName = artists.length ? artists[0].name : '';
+          const genres = Array.isArray(release.genres) ? release.genres.join(', ') : '';
+          const styles = Array.isArray(release.styles) ? release.styles.join(', ') : '';
+
+          excludeIds.push(releaseId);
+          if (excludeIds.length > MAX_EXCLUDE) excludeIds = excludeIds.slice(-MAX_EXCLUDE);
+
+          found.push({
+            id: releaseId,
+            title: video.title || `${artistName} - ${release.title}`,
+            artist: artistName,
+            videoId,
+            url: video.uri,
+            genre: genres,
+            style: styles,
+            country: release.country || '',
+            year: String(release.year || ''),
+            discogsUrl: release.uri || ''
+          });
+        } catch { continue; }
+      }
+    }
+
+    if (!found.length) {
+      setStatus('No releases with YouTube videos found. Try different filters.', true);
+      return;
+    }
+
+    shuffle(found);
+    results = found;
+    resultIndex = 0;
+    setStatus('');
+    playResult(results[0]);
+    document.getElementById('nextBtn').disabled = results.length <= 1;
+    updateHistory();
+  } catch (err) {
+    setStatus(`Error: ${err.message}`, true);
+  } finally {
+    digging = false;
+    btn.disabled = false;
+    btn.textContent = 'Dig!';
+  }
+}
+
+function nextTrack() {
+  if (!results.length) return;
+  resultIndex = (resultIndex + 1) % results.length;
+  playResult(results[resultIndex]);
+}
+
+function playResult(r) {
+  const container = document.getElementById('videoContainer');
+  document.getElementById('placeholder').style.display = 'none';
+
+  // Remove existing iframe if any
+  const old = container.querySelector('iframe');
+  if (old) old.remove();
+
+  const iframe = document.createElement('iframe');
+  iframe.src = `https://www.youtube.com/embed/${r.videoId}?autoplay=1&rel=0`;
+  iframe.allow = 'autoplay; encrypted-media';
+  iframe.allowFullscreen = true;
+  container.appendChild(iframe);
+
+  const info = document.getElementById('trackInfo');
+  info.classList.add('visible');
+  document.getElementById('trackTitle').textContent = r.title;
+
+  const meta = document.getElementById('trackMeta');
+  meta.innerHTML = '';
+  const tags = [];
+  if (r.artist) tags.push(['Artist', r.artist]);
+  if (r.genre) tags.push(['Genre', r.genre]);
+  if (r.style) tags.push(['Style', r.style]);
+  if (r.year) tags.push(['Year', r.year]);
+  if (r.country) tags.push(['Country', r.country]);
+
+  tags.forEach(([label, value]) => {
+    const span = document.createElement('span');
+    span.className = 'tag';
+    span.innerHTML = `<span class="tag-label">${label}</span>${value}`;
+    meta.appendChild(span);
+  });
+
+  if (r.discogsUrl) {
+    const link = document.createElement('a');
+    link.href = r.discogsUrl;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.className = 'tag';
+    link.innerHTML = '<span class="tag-label">Discogs</span>View';
+    link.style.textDecoration = 'none';
+    link.style.color = 'inherit';
+    meta.appendChild(link);
+  }
+}
+
+function updateHistory() {
+  const section = document.getElementById('historySection');
+  const list = document.getElementById('historyList');
+  if (!results.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  list.innerHTML = '';
+  results.forEach((r, i) => {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    if (i === resultIndex) div.style.borderLeft = `3px solid var(--accent)`;
+    div.innerHTML = `
+      <span class="hi-title">${r.title}</span>
+      <span class="hi-tags">
+        ${r.genre ? `<span class="hi-tag">${r.genre.split(',')[0]}</span>` : ''}
+        ${r.year ? `<span class="hi-tag">${r.year}</span>` : ''}
+        ${r.country ? `<span class="hi-tag">${r.country}</span>` : ''}
+      </span>`;
+    div.onclick = () => { resultIndex = i; playResult(r); updateHistory(); };
+    list.appendChild(div);
+  });
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'd' || e.key === 'D') dig();
+  if (e.key === 'n' || e.key === 'N') nextTrack();
+});
+</script>
+
+</body>
+</html>
