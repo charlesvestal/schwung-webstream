@@ -476,7 +476,14 @@ async function discogsRequest(path, params = {}) {
   if (token) headers['Authorization'] = `Discogs token=${token}`;
 
   for (let attempt = 0; attempt < 3; attempt++) {
-    const resp = await fetch(url, { headers });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    let resp;
+    try {
+      resp = await fetch(url, { headers, signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
     if (resp.status === 429 && attempt < 2) {
       await new Promise(r => setTimeout(r, 3000));
       continue;
@@ -595,11 +602,14 @@ async function dig() {
       pagesData.push(firstResults);
     }
 
-    while (found.length < count && seenPages.size < maxPageFetches && releaseLookups < maxReleaseLookups) {
+    let loopGuard = 0;
+    while (found.length < count && seenPages.size < maxPageFetches && releaseLookups < maxReleaseLookups && loopGuard++ < 300) {
       let entries;
       if (pagesData.length) {
         entries = pagesData.shift();
       } else {
+        // If we've tried all available pages, stop
+        if (seenPages.size >= poolSize) break;
         const page = Math.floor(Math.random() * poolSize) + 1;
         if (seenPages.has(page)) continue;
         seenPages.add(page);
@@ -654,7 +664,7 @@ async function dig() {
     }
 
     if (!found.length) {
-      setStatus('No releases with YouTube videos found. Try different filters.', true);
+      setStatus('No releases with YouTube videos found for this combo. Try broader filters.', true);
       return;
     }
 
