@@ -383,13 +383,6 @@ const DISCOGS_BASE = 'https://api.discogs.com';
 const USER_AGENT = 'CrateDigWeb/1.0';
 const MAX_EXCLUDE = 200;
 
-const PIPED_INSTANCES = [
-  'https://pipedapi.kavin.rocks',
-  'https://api.piped.private.coffee',
-  'https://pipedapi.adminforge.de',
-  'https://pipedapi.leptons.xyz',
-  'https://pipedapi.drgns.space',
-];
 
 let excludeIds = [];
 let poolCache = {};
@@ -570,57 +563,6 @@ function setStatus(msg, isError) {
   el.className = 'status' + (isError ? ' error' : '');
 }
 
-function buildYouTubeQuery() {
-  const parts = [];
-  const genre = document.getElementById('genre').value;
-  const style = document.getElementById('style').value;
-  const decade = document.getElementById('decade').value;
-  const country = document.getElementById('country').value;
-  if (decade) parts.push(decade);
-  if (country) parts.push(country);
-  if (style) parts.push(style);
-  else if (genre) parts.push(genre);
-  parts.push('music');
-  return parts.join(' ');
-}
-
-async function youtubeSearchFallback() {
-  const query = buildYouTubeQuery();
-  setStatus(`No Discogs results. Searching YouTube for "${query}"...`);
-
-  for (const instance of PIPED_INSTANCES) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-      const url = `${instance}/search?q=${encodeURIComponent(query)}&filter=videos`;
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeout);
-      if (!res.ok) continue;
-      const data = await res.json();
-      const items = (data.items || []).filter(i => i.type === 'stream' && i.url);
-
-      const found = items.slice(0, 5).map(item => {
-        const videoId = extractYouTubeId('https://youtube.com' + item.url);
-        return {
-          id: item.url,
-          title: item.title || 'Unknown',
-          artist: item.uploaderName || '',
-          videoId,
-          url: 'https://youtube.com' + item.url,
-          genre: document.getElementById('genre').value || '',
-          style: document.getElementById('style').value || '',
-          country: document.getElementById('country').value || '',
-          year: document.getElementById('decade').value || '',
-          discogsUrl: ''
-        };
-      }).filter(r => r.videoId);
-
-      if (found.length) return found;
-    } catch { continue; }
-  }
-  return [];
-}
-
 function randomizeFilters() {
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   const genre = pick(GENRES);
@@ -652,15 +594,6 @@ async function dig() {
     const { poolSize, firstResults } = await getPoolAndFirstPage(params);
 
     if (poolSize === 0) {
-      const ytResults = await youtubeSearchFallback();
-      if (ytResults.length) {
-        results = ytResults;
-        resultIndex = 0;
-        setStatus('No Discogs results — showing YouTube search instead.');
-        playResult(results[0]);
-        document.getElementById('nextBtn').disabled = results.length <= 1;
-        return;
-      }
       setStatus('No results found for these filters. Try broadening your search.', true);
       return;
     }
@@ -739,16 +672,7 @@ async function dig() {
     }
 
     if (!found.length) {
-      const ytResults = await youtubeSearchFallback();
-      if (ytResults.length) {
-        results = ytResults;
-        resultIndex = 0;
-        setStatus('No Discogs videos — showing YouTube search instead.');
-        playResult(results[0]);
-        document.getElementById('nextBtn').disabled = results.length <= 1;
-        return;
-      }
-      setStatus('No results found for this combo. Try broader filters.', true);
+      setStatus('No results with YouTube videos found. Try broader filters.', true);
       return;
     }
 
@@ -818,18 +742,6 @@ function playResult(r) {
     link.style.textDecoration = 'none';
     link.style.color = 'inherit';
     meta.appendChild(link);
-  }
-
-  if (r.videoId) {
-    const stemsLink = document.createElement('a');
-    stemsLink.href = `stems.html?v=${r.videoId}`;
-    stemsLink.target = '_blank';
-    stemsLink.rel = 'noopener';
-    stemsLink.className = 'tag';
-    stemsLink.innerHTML = '<span class="tag-label">Stems</span>Separate';
-    stemsLink.style.textDecoration = 'none';
-    stemsLink.style.color = 'inherit';
-    meta.appendChild(stemsLink);
   }
 
   updateHistory();
