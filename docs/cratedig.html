@@ -392,6 +392,15 @@ let poolCache = {};
 let results = [];
 let resultIndex = 0;
 let digging = false;
+let history = [];
+
+function loadHistory() {
+  try { history = JSON.parse(localStorage.getItem('cratedig_history')) || []; } catch { history = []; }
+}
+function saveHistory() {
+  localStorage.setItem('cratedig_history', JSON.stringify(history.slice(-100)));
+}
+loadHistory();
 
 function getToken() {
   return localStorage.getItem('discogs_token') || '';
@@ -458,6 +467,7 @@ populate('decade', DECADES);
 populate('country', COUNTRIES);
 populateStyles();
 loadFilters();
+updateHistory();
 document.getElementById('genre').addEventListener('change', () => {
   populateStyles();
   poolCache = {};
@@ -744,6 +754,12 @@ function playResult(r) {
     pendingVideoId = r.videoId;
   }
 
+  // Add to history if not already the most recent entry
+  if (!history.length || history[history.length - 1].videoId !== r.videoId) {
+    history.push(r);
+    saveHistory();
+  }
+
   const info = document.getElementById('trackInfo');
   info.classList.add('visible');
   document.getElementById('trackTitle').textContent = r.title;
@@ -782,13 +798,16 @@ function playResult(r) {
 function updateHistory() {
   const section = document.getElementById('historySection');
   const list = document.getElementById('historyList');
-  if (!results.length) { section.style.display = 'none'; return; }
+  if (!history.length) { section.style.display = 'none'; return; }
   section.style.display = 'block';
   list.innerHTML = '';
-  results.forEach((r, i) => {
+  // Show newest first
+  for (let i = history.length - 1; i >= 0; i--) {
+    const r = history[i];
     const div = document.createElement('div');
     div.className = 'history-item';
-    if (i === resultIndex) div.style.borderLeft = `3px solid var(--accent)`;
+    const isCurrent = results[resultIndex] && r.videoId === results[resultIndex].videoId;
+    if (isCurrent) div.style.borderLeft = '3px solid var(--accent)';
     div.innerHTML = `
       <span class="hi-title">${r.title}</span>
       <span class="hi-tags">
@@ -796,9 +815,9 @@ function updateHistory() {
         ${r.year ? `<span class="hi-tag">${r.year}</span>` : ''}
         ${r.country ? `<span class="hi-tag">${r.country}</span>` : ''}
       </span>`;
-    div.onclick = () => { resultIndex = i; playResult(r); };
+    div.onclick = () => playResult(r);
     list.appendChild(div);
-  });
+  }
 }
 
 // Keyboard shortcuts
