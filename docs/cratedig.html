@@ -145,7 +145,7 @@
     border-radius: var(--radius);
     overflow: hidden;
   }
-  .video-container iframe, .video-container #ytplayer {
+  .video-container iframe {
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
@@ -314,7 +314,15 @@
 <div class="player-area">
   <div class="video-container" id="videoContainer">
     <div class="video-placeholder" id="placeholder">Select filters and hit Dig!</div>
-    <div id="ytplayer"></div>
+    <iframe id="ytframe"
+      width="100%" height="100%"
+      src="about:blank"
+      frameborder="0"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      referrerpolicy="strict-origin-when-cross-origin"
+      allowfullscreen
+      style="display:none;">
+    </iframe>
   </div>
   <div class="track-info" id="trackInfo">
     <div class="track-title" id="trackTitle"></div>
@@ -700,59 +708,11 @@ function nextTrack() {
   playResult(results[resultIndex]);
 }
 
-// --- YouTube IFrame Player API ---
-let ytPlayer = null;
-let ytReady = false;
-let pendingVideoId = null;
-
-// Load the API script
-const ytScript = document.createElement('script');
-ytScript.src = 'https://www.youtube.com/iframe_api';
-document.head.appendChild(ytScript);
-
-function onYouTubeIframeAPIReady() {
-  ytPlayer = new YT.Player('ytplayer', {
-    width: '100%',
-    height: '100%',
-    playerVars: {
-      autoplay: 0,
-      playsinline: 1,
-      rel: 0,
-      modestbranding: 1,
-      origin: location.origin
-    },
-    events: {
-      onReady: () => {
-        ytReady = true;
-        if (pendingVideoId) {
-          ytPlayer.loadVideoById(pendingVideoId);
-          pendingVideoId = null;
-        }
-      },
-      onError: (e) => {
-        // 150 = blocked embed, 101 = same, try next track
-        if ([101, 150].includes(e.data) && results.length > 1) {
-          setStatus('Video unavailable, trying next...', false);
-          setTimeout(() => nextTrack(), 500);
-        } else {
-          setStatus('Video playback error. Try next track.', true);
-        }
-      }
-    }
-  });
-}
-// Expose globally for the YT API callback
-window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
-
 function playResult(r) {
-  const ph = document.getElementById('placeholder');
-  if (ph) ph.style.display = 'none';
-
-  if (ytReady && ytPlayer) {
-    ytPlayer.loadVideoById(r.videoId);
-  } else {
-    pendingVideoId = r.videoId;
-  }
+  document.getElementById('placeholder').style.display = 'none';
+  const frame = document.getElementById('ytframe');
+  frame.style.display = 'block';
+  frame.src = `https://www.youtube.com/embed/${r.videoId}?playsinline=1&rel=0`;
 
   // Add to history if not already the most recent entry
   if (!history.length || history[history.length - 1].videoId !== r.videoId) {
