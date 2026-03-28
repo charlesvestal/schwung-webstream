@@ -326,6 +326,7 @@
 <div class="token-area">
   <span class="token-link" onclick="toggleToken()">Discogs token (optional, for higher rate limits)</span>
   <div class="token-input-area" id="tokenArea">
+    <p style="margin-bottom:0.4rem">Get a free token at <a href="https://www.discogs.com/settings/developers" target="_blank" rel="noopener" style="color:var(--accent)">discogs.com/settings/developers</a> &mdash; raises limit from 25 to 60 requests/min</p>
     <input type="text" id="tokenInput" placeholder="Your Discogs personal access token">
     <button onclick="saveToken()">Save</button>
   </div>
@@ -496,7 +497,13 @@ async function discogsRequest(path, params = {}) {
       await new Promise(r => setTimeout(r, 3000));
       continue;
     }
-    if (!resp.ok) throw new Error(`Discogs API error: ${resp.status}`);
+    if (resp.status === 429) {
+      throw new Error('Rate limited by Discogs. Add a personal access token below for higher limits.');
+    }
+    if (resp.status === 401 || resp.status === 403) {
+      throw new Error('Discogs authentication error. Check your token below.');
+    }
+    if (!resp.ok) throw new Error(`Discogs error (${resp.status}). Try again or add a token below for higher rate limits.`);
     return resp.json();
   }
 }
