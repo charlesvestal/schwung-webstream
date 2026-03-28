@@ -430,17 +430,40 @@ function populateStyles() {
   }
 }
 
+function saveFilters() {
+  localStorage.setItem('cratedig_filters', JSON.stringify({
+    genre: document.getElementById('genre').value,
+    style: document.getElementById('style').value,
+    decade: document.getElementById('decade').value,
+    country: document.getElementById('country').value
+  }));
+}
+
+function loadFilters() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('cratedig_filters'));
+    if (!saved) return;
+    if (saved.genre) document.getElementById('genre').value = saved.genre;
+    populateStyles();
+    if (saved.style) document.getElementById('style').value = saved.style;
+    if (saved.decade) document.getElementById('decade').value = saved.decade;
+    if (saved.country) document.getElementById('country').value = saved.country;
+  } catch {}
+}
+
 populate('genre', GENRES);
 populate('decade', DECADES);
 populate('country', COUNTRIES);
 populateStyles();
+loadFilters();
 document.getElementById('genre').addEventListener('change', () => {
   populateStyles();
   poolCache = {};
+  saveFilters();
 });
-document.getElementById('style').addEventListener('change', () => { poolCache = {}; });
-document.getElementById('decade').addEventListener('change', () => { poolCache = {}; });
-document.getElementById('country').addEventListener('change', () => { poolCache = {}; });
+document.getElementById('style').addEventListener('change', () => { poolCache = {}; saveFilters(); });
+document.getElementById('decade').addEventListener('change', () => { poolCache = {}; saveFilters(); });
+document.getElementById('country').addEventListener('change', () => { poolCache = {}; saveFilters(); });
 
 // --- Discogs API ---
 async function discogsRequest(path, params = {}) {
