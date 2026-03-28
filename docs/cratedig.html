@@ -145,7 +145,7 @@
     border-radius: var(--radius);
     overflow: hidden;
   }
-  .video-container iframe {
+  .video-container iframe, .video-container #ytplayer {
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
@@ -314,6 +314,7 @@
 <div class="player-area">
   <div class="video-container" id="videoContainer">
     <div class="video-placeholder" id="placeholder">Select filters and hit Dig!</div>
+    <div id="ytplayer"></div>
   </div>
   <div class="track-info" id="trackInfo">
     <div class="track-title" id="trackTitle"></div>
@@ -674,7 +675,6 @@ async function dig() {
     setStatus('');
     playResult(results[0]);
     document.getElementById('nextBtn').disabled = results.length <= 1;
-    updateHistory();
   } catch (err) {
     setStatus(`Error: ${err.message}`, true);
   } finally {
@@ -690,28 +690,59 @@ function nextTrack() {
   playResult(results[resultIndex]);
 }
 
+// --- YouTube IFrame Player API ---
+let ytPlayer = null;
+let ytReady = false;
+let pendingVideoId = null;
+
+// Load the API script
+const ytScript = document.createElement('script');
+ytScript.src = 'https://www.youtube.com/iframe_api';
+document.head.appendChild(ytScript);
+
+function onYouTubeIframeAPIReady() {
+  ytPlayer = new YT.Player('ytplayer', {
+    width: '100%',
+    height: '100%',
+    playerVars: {
+      autoplay: 0,
+      playsinline: 1,
+      rel: 0,
+      modestbranding: 1,
+      origin: location.origin
+    },
+    events: {
+      onReady: () => {
+        ytReady = true;
+        if (pendingVideoId) {
+          ytPlayer.loadVideoById(pendingVideoId);
+          pendingVideoId = null;
+        }
+      },
+      onError: (e) => {
+        // 150 = blocked embed, 101 = same, try next track
+        if ([101, 150].includes(e.data) && results.length > 1) {
+          setStatus('Video unavailable, trying next...', false);
+          setTimeout(() => nextTrack(), 500);
+        } else {
+          setStatus('Video playback error. Try next track.', true);
+        }
+      }
+    }
+  });
+}
+// Expose globally for the YT API callback
+window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+
 function playResult(r) {
-  const container = document.getElementById('videoContainer');
   const ph = document.getElementById('placeholder');
-  if (ph) ph.remove();
+  if (ph) ph.style.display = 'none';
 
-  // Remove existing iframe if any
-  const old = container.querySelector('iframe');
-  if (old) old.remove();
-
-  const iframe = document.createElement('iframe');
-  iframe.src = `https://www.youtube.com/embed/${r.videoId}?autoplay=1&playsinline=1&rel=0`;
-  iframe.allow = 'autoplay; encrypted-media; web-share';
-  iframe.setAttribute('allowfullscreen', '');
-  iframe.setAttribute('webkit-playsinline', '');
-  iframe.setAttribute('playsinline', '');
-  // Force explicit dimensions for iOS
-  iframe.style.width = '100%';
-  iframe.style.height = '100%';
-  iframe.style.position = 'absolute';
-  iframe.style.top = '0';
-  iframe.style.left = '0';
-  container.appendChild(iframe);
+  if (ytReady && ytPlayer) {
+    ytPlayer.loadVideoById(r.videoId);
+  } else {
+    pendingVideoId = r.videoId;
+  }
 
   const info = document.getElementById('trackInfo');
   info.classList.add('visible');
@@ -744,6 +775,8 @@ function playResult(r) {
     link.style.color = 'inherit';
     meta.appendChild(link);
   }
+
+  updateHistory();
 }
 
 function updateHistory() {
@@ -763,7 +796,7 @@ function updateHistory() {
         ${r.year ? `<span class="hi-tag">${r.year}</span>` : ''}
         ${r.country ? `<span class="hi-tag">${r.country}</span>` : ''}
       </span>`;
-    div.onclick = () => { resultIndex = i; playResult(r); updateHistory(); };
+    div.onclick = () => { resultIndex = i; playResult(r); };
     list.appendChild(div);
   });
 }
