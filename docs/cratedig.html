@@ -305,6 +305,7 @@
 
 <div class="actions">
   <button class="dig-btn" id="digBtn" onclick="dig()">Dig!</button>
+  <button class="next-btn" onclick="randomizeFilters()">Shuffle Filters</button>
   <button class="next-btn" id="nextBtn" onclick="nextTrack()" disabled>Next</button>
 </div>
 
@@ -545,6 +546,23 @@ function setStatus(msg, isError) {
   const el = document.getElementById('status');
   el.textContent = msg;
   el.className = 'status' + (isError ? ' error' : '');
+}
+
+function randomizeFilters() {
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const genre = pick(GENRES);
+  document.getElementById('genre').value = genre === 'Any' ? '' : genre;
+  populateStyles();
+  if (genre !== 'Any' && STYLES[genre]) {
+    const style = pick(STYLES[genre]);
+    document.getElementById('style').value = style === 'Any' ? '' : style;
+  }
+  const decade = pick(DECADES);
+  document.getElementById('decade').value = decade === 'Any' ? '' : decade;
+  const country = pick(COUNTRIES);
+  document.getElementById('country').value = country === 'Any' ? '' : country;
+  poolCache = {};
+  saveFilters();
 }
 
 async function dig() {
