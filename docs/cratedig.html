@@ -512,39 +512,49 @@ const GENRES = [
 ];
 
 const STYLES = {
-  'Blues': ['Any', 'Chicago Blues', 'Country Blues', 'Delta Blues', 'Electric Blues', 'Harmonica Blues', 'Jump Blues', 'Louisiana Blues', 'Modern Electric Blues', 'Piano Blues', 'Rhythm & Blues', 'Texas Blues'],
-  'Brass & Military': ['Any', 'Brass Band', 'Marches', 'Military'],
+  'Blues': ['Any', 'Boogie Woogie', 'Chicago Blues', 'Country Blues', 'Delta Blues', 'East Coast Blues', 'Electric Blues', 'Harmonica Blues', 'Jump Blues', 'Louisiana Blues', 'Memphis Blues', 'Modern Electric Blues', 'Piano Blues', 'Piedmont Blues', 'Rhythm & Blues', 'Texas Blues'],
+  'Brass & Military': ['Any', 'Brass Band', 'Marches', 'Military', 'Pipe & Drum'],
   "Children's": ['Any', 'Educational', 'Nursery Rhymes', 'Story'],
-  'Classical': ['Any', 'Baroque', 'Classical', 'Contemporary', 'Impressionist', 'Medieval', 'Modern', 'Neo-Classical', 'Neo-Romantic', 'Opera', 'Post-Modern', 'Renaissance', 'Romantic'],
-  'Electronic': ['Any', 'Abstract', 'Acid', 'Acid House', 'Acid Jazz', 'Ambient', 'Breakbeat', 'Breakcore', 'Breaks', 'Dark Ambient', 'Deep House', 'Disco', 'Downtempo', 'Drone', 'Dub Techno', 'Electro', 'Experimental', 'Garage House', 'House', 'IDM', 'Industrial', 'Jungle', 'Leftfield', 'Minimal', 'Musique Concrète', 'Noise', 'Nu-Disco', 'Synth-pop', 'Techno', 'Trance', 'Trip Hop'],
-  'Folk, World, & Country': ['Any', 'African', 'Afrobeat', 'Bluegrass', 'Cajun', 'Celtic', 'Country', 'Fado', 'Flamenco', 'Folk', 'Gospel', 'Highlife', 'Hindustani', 'Honky Tonk', 'Indian Classical', 'Klezmer', 'Nordic', 'Pacific', 'Polka', 'Raï', 'Rockabilly', 'Soca', 'Soukous', 'Zydeco'],
-  'Funk / Soul': ['Any', 'Afrobeat', 'Boogie', 'Contemporary R&B', 'Disco', 'Free Funk', 'Funk', 'Gospel', 'Neo Soul', 'New Jack Swing', 'Northern Soul', 'P.Funk', 'Psychedelic', 'Rhythm & Blues', 'Soul', 'Swingbeat'],
-  'Hip Hop': ['Any', 'Bass Music', 'Boom Bap', 'Conscious', 'Crunk', 'Cut-up/DJ', 'Electro', 'G-Funk', 'Gangsta', 'Grime', 'Hardcore Hip-Hop', 'Instrumental', 'Jazz-Funk', 'Pop Rap', 'RnB/Swing', 'Thug Rap', 'Trip Hop', 'Turntablism'],
-  'Jazz': ['Any', 'Afro-Cuban Jazz', 'Avant-garde Jazz', 'Bebop', 'Big Band', 'Bop', 'Bossa Nova', 'Cool Jazz', 'Dixieland', 'Free Improvisation', 'Free Jazz', 'Fusion', 'Gypsy Jazz', 'Hard Bop', 'Jazz-Funk', 'Jazz-Rock', 'Latin Jazz', 'Modal', 'Post Bop', 'Ragtime', 'Smooth Jazz', 'Soul-Jazz', 'Space-Age', 'Swing'],
-  'Latin': ['Any', 'Baião', 'Batucada', 'Bolero', 'Boogaloo', 'Bossa Nova', 'Cha-Cha', 'Charanga', 'Compas', 'Cumbia', 'Descarga', 'Forró', 'Guaracha', 'MPB', 'Mambo', 'Merengue', 'Norteño', 'Plena', 'Rumba', 'Salsa', 'Samba', 'Son', 'Tango', 'Tejano', 'Tropicália', 'Vallenato'],
-  'Non-Music': ['Any', 'Audiobook', 'Comedy', 'Dialogue', 'Education', 'Field Recording', 'Interview', 'Monolog', 'Poetry', 'Political', 'Propaganda', 'Radioplay', 'Religious', 'Spoken Word'],
-  'Pop': ['Any', 'Ballad', 'Baroque Pop', 'Britpop', 'Bubblegum', 'Chanson', 'City Pop', 'Dance-pop', 'Dream Pop', 'Europop', 'Indie Pop', 'J-pop', 'K-pop', 'New Wave', 'Power Pop', 'Schlager', 'Shoegaze', 'Sunshine Pop', 'Synth-pop', 'Teen Pop', 'Vocal'],
-  'Reggae': ['Any', 'Calypso', 'Dancehall', 'Dub', 'Lovers Rock', 'Ragga', 'Reggae', 'Reggae-Pop', 'Rocksteady', 'Roots Reggae', 'Ska', 'Soca'],
-  'Rock': ['Any', 'Acid Rock', 'Alternative Rock', 'Arena Rock', 'Art Rock', 'Blues Rock', 'Classic Rock', 'Doom Metal', 'Garage Rock', 'Glam', 'Grunge', 'Hard Rock', 'Indie Rock', 'Krautrock', 'Lo-Fi', 'Math Rock', 'Mod', 'Noise', 'Post-Punk', 'Post Rock', 'Prog Rock', 'Psychedelic Rock', 'Pub Rock', 'Punk', 'Shoegaze', 'Space Rock', 'Stoner Rock', 'Surf'],
+  'Classical': ['Any', 'Baroque', 'Choral', 'Classical', 'Contemporary', 'Early', 'Impressionist', 'Medieval', 'Modern', 'Neo-Classical', 'Neo-Romantic', 'Opera', 'Operetta', 'Oratorio', 'Post-Modern', 'Renaissance', 'Romantic', 'Serial', 'Twelve-tone', 'Zarzuela'],
+  'Electronic': ['Any', 'Abstract', 'Acid', 'Acid House', 'Acid Jazz', 'Ambient', 'Ballroom', 'Baltimore Club', 'Bassline', 'Beatdown', 'Berlin-School', 'Big Beat', 'Breakbeat', 'Breakcore', 'Breaks', 'Broken Beat', 'Chillwave', 'Chiptune', 'Dance-pop', 'Dark Ambient', 'Darkwave', 'Deep House', 'Deep Techno', 'Disco', 'Disco Polo', 'Donk', 'Doomcore', 'Downtempo', 'Drone', 'Drum n Bass', 'Dub', 'Dub Techno', 'Dubstep', 'Dungeon Synth', 'EBM', 'Electro', 'Electro House', 'Electroclash', 'Euro House', 'Euro-Disco', 'Eurobeat', 'Eurodance', 'Experimental', 'Freestyle', 'Funkot', 'Future Jazz', 'Gabber', 'Garage House', 'Ghetto', 'Ghetto House', 'Ghettotech', 'Glitch', 'Goa Trance', 'Grime', 'Hands Up', 'Happy Hardcore', 'Hard Beat', 'Hard House', 'Hard Techno', 'Hard Trance', 'Hardcore', 'Hardstyle', 'Harsh Noise Wall', 'Hi NRG', 'Hip Hop', 'Hip-House', 'House', 'IDM', 'Illbient', 'Industrial', 'Italo House', 'Italo-Disco', 'Italodance', 'J-Core', 'Jazzdance', 'Juke', 'Jumpstyle', 'Jungle', 'Latin', 'Leftfield', 'Lento Violento', 'Makina', 'Minimal', 'Minimal Techno', 'Modern Classical', 'Musique Concrète', 'Neo Trance', 'Neofolk', 'Nerdcore Techno', 'New Age', 'New Beat', 'New Wave', 'Noise', 'Nu-Disco', 'Power Electronics', 'Progressive Breaks', 'Progressive House', 'Progressive Trance', 'Psy-Trance', 'Rhythmic Noise', 'Schranz', 'Skweee', 'Sound Collage', 'Speed Garage', 'Speedcore', 'Synth-pop', 'Synthwave', 'Tech House', 'Tech Trance', 'Techno', 'Trance', 'Tribal', 'Tribal House', 'Trip Hop', 'Tropical House', 'UK Funky', 'UK Garage', 'Vaporwave', 'Witch House'],
+  'Folk, World, & Country': ['Any', 'Aboriginal', 'African', 'Andalusian Classical', 'Appalachian Music', 'Bangladeshi Classical', 'Basque Music', 'Bengali Music', 'Bhangra', 'Bluegrass', 'Cajun', 'Cambodian Classical', 'Canzone Napoletana', 'Carnatic', 'Catalan Music', 'Celtic', 'Chacarera', 'Chamamé', 'Chinese Classical', 'Chutney', 'Cobla', 'Copla', 'Country', 'Dangdut', 'Éntekhno', 'Fado', 'Filk', 'Flamenco', 'Folk', 'Funaná', 'Gagaku', 'Gamelan', 'Gospel', 'Griot', 'Guarania', 'Hawaiian', 'Highlife', 'Hillbilly', 'Hindustani', 'Honky Tonk', 'Indian Classical', 'Jota', 'Kaseko', 'Keroncong', 'Kizomba', 'Klasik', 'Klezmer', 'Korean Court Music', 'Laïkó', 'Lao Music', 'Liscio', 'Luk Krung', 'Luk Thung', 'Maloya', 'Mbalax', "Min'yō", 'Mizrahi', 'Mouth Music', 'Mugham', 'Népzene', 'Nordic', 'Ottoman Classical', 'Overtone Singing', 'Pacific', 'Pasodoble', 'Persian Classical', 'Philippine Classical', 'Phleng Phuea Chiwit', 'Piobaireachd', 'Polka', 'Progressive Bluegrass', 'Raï', 'Rebetiko', 'Romani', 'Rune Singing', 'Salegy', 'Sámi Music', 'Sea Shanties', 'Séga', 'Sephardic', 'Soukous', 'Thai Classical', 'Volksmusik', 'Waiata', 'Western Swing', 'Yemenite Jewish', 'Zamba', 'Zemer Ivri', 'Zouk', 'Zydeco'],
+  'Funk / Soul': ['Any', 'Afrobeat', 'Bayou Funk', 'Boogie', 'Contemporary R&B', 'Disco', 'Free Funk', 'Funk', 'Gogo', 'Gospel', 'Minneapolis Sound', 'Neo Soul', 'New Jack Swing', 'P.Funk', 'Psychedelic', 'Rhythm & Blues', 'Soul', 'Swingbeat', 'UK Street Soul'],
+  'Hip Hop': ['Any', 'Bass Music', 'Beatbox', 'Bongo Flava', 'Boom Bap', 'Bounce', 'Britcore', 'Cloud Rap', 'Conscious', 'Crunk', 'Cut-up/DJ', 'DJ Battle Tool', 'Electro', 'Favela Funk', 'G-Funk', 'Gangsta', 'Go-Go', 'Grime', 'Hardcore Hip-Hop', 'Hiplife', 'Horrorcore', 'Hyphy', 'Instrumental', 'Jazzy Hip-Hop', 'Kwaito', 'Miami Bass', 'Motswako', 'Pop Rap', 'Ragga HipHop', 'RnB/Swing', 'Screw', 'Spaza', 'Thug Rap', 'Trap', 'Trip Hop', 'Turntablism'],
+  'Jazz': ['Any', 'Afro-Cuban Jazz', 'Afrobeat', 'Avant-garde Jazz', 'Big Band', 'Bop', 'Bossa Nova', 'Cape Jazz', 'Contemporary Jazz', 'Cool Jazz', 'Dixieland', 'Easy Listening', 'Free Improvisation', 'Free Jazz', 'Fusion', 'Gypsy Jazz', 'Hard Bop', 'Jazz-Funk', 'Jazz-Rock', 'Latin Jazz', 'Modal', 'Post Bop', 'Ragtime', 'Smooth Jazz', 'Soul-Jazz', 'Space-Age', 'Swing'],
+  'Latin': ['Any', 'Afro-Cuban', 'Axé', 'Bachata', 'Baião', 'Batucada', 'Beguine', 'Bolero', 'Bomba', 'Boogaloo', 'Bossanova', 'Candombe', 'Carimbó', 'Cha-Cha', 'Champeta', 'Charanga', 'Choro', 'Compas', 'Conjunto', 'Corrido', 'Cuatro', 'Cubano', 'Cumbia', 'Danzon', 'Descarga', 'Forró', 'Gaita', 'Guaguancó', 'Guajira', 'Guaracha', 'Jibaro', 'Joropo', 'Lambada', 'Mambo', 'Marcha Carnavalesca', 'Mariachi', 'Marimba', 'Merengue', 'MPB', 'Musette', 'Música Criolla', 'Norteño', 'Nueva Cancion', 'Nueva Trova', 'Occitan', 'Pachanga', 'Plena', 'Porro', 'Quechua', 'Ranchera', 'Reggaeton', 'Rumba', 'Salsa', 'Samba', 'Samba-Canção', 'Seresta', 'Son', 'Son Montuno', 'Sonero', 'Tango', 'Tejano', 'Timba', 'Trova', 'Vallenato'],
+  'Non-Music': ['Any', 'Audiobook', 'Comedy', 'Dialogue', 'Education', 'Field Recording', 'Health-Fitness', 'Interview', 'Monolog', 'Movie Effects', 'Poetry', 'Political', 'Promotional', 'Public Broadcast', 'Public Service Announcement', 'Radioplay', 'Religious', 'Sermon', 'Sound Art', 'Sound Poetry', 'Special Effects', 'Speech', 'Spoken Word', 'Technical', 'Therapy'],
+  'Pop': ['Any', 'Ballad', 'Barbershop', 'Bollywood', 'Break-In', 'Bubblegum', 'Chanson', 'Enka', 'Ethno-pop', 'Europop', 'Indie Pop', 'J-pop', 'K-pop', 'Karaoke', 'Kayōkyoku', 'Levenslied', 'Light Music', 'Music Hall', 'Néo Kyma', 'Novelty', 'Parody', 'Schlager', 'Vocal'],
+  'Reggae': ['Any', 'Azonto', 'Bubbling', 'Calypso', 'Dancehall', 'Dub', 'Dub Poetry', 'Junkanoo', 'Lovers Rock', 'Mento', 'Ragga', 'Rapso', 'Reggae', 'Reggae Gospel', 'Reggae-Pop', 'Rocksteady', 'Roots Reggae', 'Ska', 'Soca', 'Steel Band'],
+  'Rock': ['Any', 'Acid Rock', 'Acoustic', 'Alternative Rock', 'AOR', 'Arena Rock', 'Art Rock', 'Atmospheric Black Metal', 'Avantgarde', 'Beat', 'Black Metal', 'Blues Rock', 'Brit Pop', 'Classic Rock', 'Coldwave', 'Country Rock', 'Crust', 'Death Metal', 'Deathcore', 'Deathrock', 'Depressive Black Metal', 'Doo Wop', 'Doom Metal', 'Dream Pop', 'Emo', 'Ethereal', 'Experimental', 'Folk Metal', 'Folk Rock', 'Funeral Doom Metal', 'Funk Metal', 'Garage Rock', 'Glam', 'Goregrind', 'Goth Rock', 'Gothic Metal', 'Grindcore', 'Grunge', 'Hard Rock', 'Hardcore', 'Heavy Metal', 'Horror Rock', 'Indie Rock', 'Industrial', 'Krautrock', 'Lo-Fi', 'Lounge', 'Math Rock', 'Melodic Death Metal', 'Melodic Hardcore', 'Metalcore', 'Mod', 'NDW', 'Neofolk', 'New Wave', 'No Wave', 'Noise', 'Noisecore', 'Nu Metal', 'Oi', 'Parody', 'Pop Punk', 'Pop Rock', 'Pornogrind', 'Post Rock', 'Post-Hardcore', 'Post-Metal', 'Post-Punk', 'Power Metal', 'Power Pop', 'Power Violence', 'Prog Rock', 'Progressive Metal', 'Psychedelic Rock', 'Psychobilly', 'Pub Rock', 'Punk', 'Rock & Roll', 'Rock Opera', 'Rockabilly', 'Shoegaze', 'Ska', 'Skiffle', 'Sludge Metal', 'Soft Rock', 'Southern Rock', 'Space Rock', 'Speed Metal', 'Stoner Rock', 'Surf', 'Swamp Pop', 'Symphonic Rock', 'Technical Death Metal', 'Thrash', 'Twist', 'Viking Metal', 'Yé-Yé'],
   'Stage & Screen': ['Any', 'Musical', 'Score', 'Soundtrack', 'Theme']
 };
 
 const DECADES = ['Any', '1920s', '1930s', '1940s', '1950s', '1960s', '1970s', '1980s', '1990s', '2000s', '2010s', '2020s'];
 
 const COUNTRIES = [
-  'Any',
-  'US', 'Canada', 'Mexico', 'Brazil', 'Argentina', 'Colombia', 'Cuba', 'Jamaica',
-  'Puerto Rico', 'Venezuela', 'Chile', 'Peru', 'Trinidad & Tobago', 'Haiti',
-  'UK', 'France', 'Germany', 'Italy', 'Spain', 'Netherlands', 'Belgium', 'Sweden',
-  'Norway', 'Denmark', 'Finland', 'Iceland', 'Portugal', 'Greece', 'Turkey',
-  'Poland', 'Czech Republic', 'Austria', 'Switzerland', 'Ireland', 'Romania',
-  'Hungary', 'Serbia', 'Croatia', 'Bulgaria', 'Ukraine', 'Russia',
-  'Nigeria', 'South Africa', 'Ethiopia', 'Ghana', 'Senegal', 'Kenya',
-  'Tanzania', 'Congo', 'Mali', 'Cameroon', 'Benin', 'Ivory Coast',
-  'Zimbabwe', 'Morocco', 'Algeria', 'Egypt', 'Cape Verde', 'Guinea',
-  'Japan', 'South Korea', 'India', 'Indonesia', 'Philippines', 'Thailand',
-  'Vietnam', 'China', 'Taiwan', 'Pakistan', 'Iran', 'Israel', 'Lebanon',
-  'Australia', 'New Zealand'
+  { region: null, countries: ['Any'] },
+  { region: 'Americas', countries: [
+    'Argentina', 'Brazil', 'Canada', 'Chile', 'Colombia', 'Cuba', 'Haiti',
+    'Jamaica', 'Mexico', 'Peru', 'Puerto Rico', 'Trinidad & Tobago', 'US', 'Venezuela'
+  ]},
+  { region: 'Europe', countries: [
+    'Austria', 'Belgium', 'Bulgaria', 'Croatia', 'Czech Republic', 'Denmark',
+    'Finland', 'France', 'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland',
+    'Italy', 'Netherlands', 'Norway', 'Poland', 'Portugal', 'Romania', 'Russia',
+    'Serbia', 'Spain', 'Sweden', 'Switzerland', 'Turkey', 'UK', 'Ukraine'
+  ]},
+  { region: 'Africa', countries: [
+    'Algeria', 'Benin', 'Cameroon', 'Cape Verde', 'Congo', 'Egypt', 'Ethiopia',
+    'Ghana', 'Guinea', 'Ivory Coast', 'Kenya', 'Mali', 'Morocco', 'Nigeria',
+    'Senegal', 'South Africa', 'Tanzania', 'Zimbabwe'
+  ]},
+  { region: 'Asia', countries: [
+    'China', 'India', 'Indonesia', 'Iran', 'Israel', 'Japan', 'Lebanon',
+    'Pakistan', 'Philippines', 'South Korea', 'Taiwan', 'Thailand', 'Vietnam'
+  ]},
+  { region: 'Oceania', countries: [
+    'Australia', 'New Zealand'
+  ]}
 ];
 
 const DISCOGS_BASE = 'https://api.discogs.com';
@@ -636,6 +646,33 @@ function populateStyles() {
   }
 }
 
+function populateCountries() {
+  const sel = document.getElementById('country');
+  sel.innerHTML = '';
+  for (const group of COUNTRIES) {
+    if (group.region) {
+      const og = document.createElement('optgroup');
+      og.label = group.region;
+      for (const c of group.countries) {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        og.appendChild(opt);
+      }
+      sel.appendChild(og);
+    } else {
+      for (const c of group.countries) {
+        const opt = document.createElement('option');
+        opt.value = c === 'Any' ? '' : c;
+        opt.textContent = c;
+        sel.appendChild(opt);
+      }
+    }
+  }
+}
+
+const ALL_COUNTRIES = COUNTRIES.flatMap(g => g.countries);
+
 function saveFilters() {
   localStorage.setItem('cratedig_filters', JSON.stringify({
     genre: document.getElementById('genre').value,
@@ -675,7 +712,7 @@ function onFilterChange() {
 
 populate('genre', GENRES);
 populate('decade', DECADES);
-populate('country', COUNTRIES);
+populateCountries();
 populateStyles();
 loadFilters();
 updateHistory();
@@ -852,7 +889,7 @@ function randomizeFilters() {
   }
   const decade = pick(DECADES);
   document.getElementById('decade').value = decade === 'Any' ? '' : decade;
-  const country = pick(COUNTRIES);
+  const country = pick(ALL_COUNTRIES);
   document.getElementById('country').value = country === 'Any' ? '' : country;
   poolCache = {};
   saveFilters();
@@ -1068,7 +1105,7 @@ function moreLikeThis(r) {
     if (DECADES.includes(decadeStr)) document.getElementById('decade').value = decadeStr;
   }
   // Match country
-  if (r.country && COUNTRIES.includes(r.country)) {
+  if (r.country && ALL_COUNTRIES.includes(r.country)) {
     document.getElementById('country').value = r.country;
   }
   poolCache = {};
