@@ -740,6 +740,13 @@ async function discogsRequest(path, params = {}) {
     let resp;
     try {
       resp = await fetch(url, { headers, signal: controller.signal });
+    } catch (fetchErr) {
+      clearTimeout(timeout);
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 3000));
+        continue;
+      }
+      throw new Error('Could not reach Discogs — you may be rate limited. Add a personal access token below for higher limits.');
     } finally {
       clearTimeout(timeout);
     }
