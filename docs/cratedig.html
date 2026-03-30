@@ -811,17 +811,18 @@ function cacheKey() {
 async function getPoolAndFirstPage(params) {
   const key = cacheKey();
   if (poolCache[key]) {
-    showPoolSize(poolCache[key]);
-    return { poolSize: poolCache[key], firstResults: null };
+    showPoolSize(poolCache[key].pages, poolCache[key].items);
+    return { poolSize: poolCache[key].pages, firstResults: null };
   }
 
   const probe = { ...params, page: '1' };
   const data = await discogsRequest('/database/search', probe);
   const pages = Math.min(data.pagination?.pages || 0, 100);
   const totalResults = data.pagination?.items || 0;
-  poolCache[key] = pages;
+  poolCache[key] = { pages, items: totalResults };
   showPoolSize(pages, totalResults);
 
+  if (totalResults === 0) return { poolSize: 0, firstResults: [] };
   if (pages <= 1) return { poolSize: pages, firstResults: data.results || [] };
 
   const page = Math.floor(Math.random() * pages) + 1;
@@ -833,7 +834,7 @@ async function getPoolAndFirstPage(params) {
 
 function showPoolSize(pages, totalResults) {
   const el = document.getElementById('poolInfo');
-  if (pages === 0) {
+  if (totalResults === 0) {
     el.textContent = 'No releases match these filters';
   } else if (totalResults) {
     const display = totalResults > 10000 ? Math.floor(totalResults / 1000) + 'k+' : totalResults.toLocaleString();
@@ -847,11 +848,14 @@ function showPoolSize(pages, totalResults) {
 let prefetchTimer = null;
 function prefetchPoolSize() {
   clearTimeout(prefetchTimer);
+  document.getElementById('poolInfo').textContent = '...';
   prefetchTimer = setTimeout(async () => {
     try {
       const params = buildSearchParams();
       await getPoolAndFirstPage(params);
-    } catch {}
+    } catch {
+      document.getElementById('poolInfo').textContent = 'Could not check pool size';
+    }
   }, 500);
 }
 prefetchPoolSize();
