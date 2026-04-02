@@ -946,6 +946,9 @@ function buildCratedigRootItems() {
     clearSearchState(true);
     openProviderMenu();
   }));
+  if (typeof host_swap_module === 'function') {
+    items.push(createAction('[Swap module]', function() { host_swap_module(); }));
+  }
   return items;
 }
 
@@ -972,6 +975,9 @@ function buildSampletteRootItems() {
     clearSearchState(true);
     openProviderMenu();
   }));
+  if (typeof host_swap_module === 'function') {
+    items.push(createAction('[Swap module]', () => host_swap_module()));
+  }
 
   return items;
 }
@@ -1003,6 +1009,9 @@ function buildRootItems() {
   items.push(createAction('[Previous searches]', () => {
     openSearchHistoryMenu();
   }));
+  if (typeof host_swap_module === 'function') {
+    items.push(createAction('[Swap module]', () => host_swap_module()));
+  }
 
   const count = Math.min(results.length, MAX_MENU_RESULTS);
   for (let i = 0; i < count; i++) {
