@@ -1333,17 +1333,19 @@ function playResult(r) {
   wsLink.style.color = 'inherit';
   meta.appendChild(wsLink);
 
-  // Send to Move button
-  const sendBtn = document.createElement('a');
-  const sendUrl = 'http://schwung.local/download?url=' + encodeURIComponent(r.url || 'https://www.youtube.com/watch?v=' + r.videoId) + '&title=' + encodeURIComponent(r.title || '');
-  sendBtn.href = sendUrl;
-  sendBtn.target = '_blank';
-  sendBtn.rel = 'noopener';
-  sendBtn.className = 'tag tag-btn';
-  sendBtn.innerHTML = '<span class="tag-label">Move</span>Send';
-  sendBtn.style.textDecoration = 'none';
-  sendBtn.style.color = 'inherit';
-  meta.appendChild(sendBtn);
+  // Send to Move button (only visible with ?move=1 URL parameter)
+  if (new URLSearchParams(window.location.search).has('move')) {
+    const sendBtn = document.createElement('a');
+    const sendUrl = 'http://schwung.local/download?url=' + encodeURIComponent(r.url || 'https://www.youtube.com/watch?v=' + r.videoId) + '&title=' + encodeURIComponent(r.title || '');
+    sendBtn.href = sendUrl;
+    sendBtn.target = '_blank';
+    sendBtn.rel = 'noopener';
+    sendBtn.className = 'tag tag-btn';
+    sendBtn.innerHTML = '<span class="tag-label">Move</span>Send';
+    sendBtn.style.textDecoration = 'none';
+    sendBtn.style.color = 'inherit';
+    meta.appendChild(sendBtn);
+  }
 
   // Favorite button
   const favBtn = document.createElement('span');
