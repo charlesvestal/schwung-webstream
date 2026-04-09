@@ -252,6 +252,79 @@
     border: 1px solid transparent;
   }
   .tag-btn:hover { border-color: var(--accent); }
+  .tag-fav {
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .tag-fav:hover { border-color: var(--accent); }
+  .tag-fav.active { color: var(--accent); }
+  .tag-note {
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: border-color 0.15s;
+  }
+  .tag-note:hover { border-color: var(--accent); }
+  .tag-note.has-note { border-color: var(--accent-dim); }
+
+  /* Note modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 1.2rem;
+    width: 90%;
+    max-width: 400px;
+  }
+  .modal h3 {
+    color: var(--accent);
+    font-size: 0.9rem;
+    margin-bottom: 0.6rem;
+  }
+  .modal textarea {
+    width: 100%;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid #444;
+    border-radius: var(--radius);
+    padding: 0.5rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    resize: vertical;
+    min-height: 80px;
+  }
+  .modal textarea:focus { outline: none; border-color: var(--accent); }
+  .modal-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+    justify-content: flex-end;
+  }
+  .modal-actions button {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  .modal-actions button.primary {
+    background: var(--accent);
+    color: #111;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  .fav-indicator { color: var(--accent); margin-left: 0.3rem; font-size: 0.7rem; }
+  .note-indicator { color: var(--accent-dim); margin-left: 0.2rem; font-size: 0.65rem; }
 
   /* Queue */
   .queue {
@@ -504,6 +577,17 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="modal-overlay" id="noteModal">
+  <div class="modal">
+    <h3 id="noteModalTitle">Add Note</h3>
+    <textarea id="noteInput" placeholder='e.g. "breaks", "snare at 1:15"'></textarea>
+    <div class="modal-actions">
+      <button onclick="closeNoteModal()">Cancel</button>
+      <button class="primary" onclick="saveNote()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const GENRES = [
   'Any', 'Blues', 'Brass & Military', "Children's", 'Classical',
@@ -576,6 +660,98 @@ function saveHistory() {
   localStorage.setItem('cratedig_history', JSON.stringify(history.slice(-100)));
 }
 loadHistory();
+
+// --- Favorites ---
+function loadFavorites() {
+  try { return JSON.parse(localStorage.getItem('cratedig_favorites')) || {}; } catch { return {}; }
+}
+function saveFavorites(favs) {
+  localStorage.setItem('cratedig_favorites', JSON.stringify(favs));
+}
+function isFavorite(videoId) {
+  return !!loadFavorites()[videoId];
+}
+function toggleFavorite(videoId, title) {
+  const favs = loadFavorites();
+  if (favs[videoId]) {
+    delete favs[videoId];
+  } else {
+    favs[videoId] = { title, ts: Date.now() };
+  }
+  saveFavorites(favs);
+  return !!favs[videoId];
+}
+
+// --- Notes ---
+function loadNotes() {
+  try { return JSON.parse(localStorage.getItem('cratedig_notes')) || {}; } catch { return {}; }
+}
+function saveNotes(notes) {
+  localStorage.setItem('cratedig_notes', JSON.stringify(notes));
+}
+function getNote(videoId) {
+  return loadNotes()[videoId] || '';
+}
+let noteModalVideoId = null;
+function openNoteModal(videoId, title) {
+  noteModalVideoId = videoId;
+  document.getElementById('noteModalTitle').textContent = title ? `Note: ${title.slice(0, 40)}` : 'Add Note';
+  document.getElementById('noteInput').value = getNote(videoId);
+  document.getElementById('noteModal').classList.add('visible');
+  document.getElementById('noteInput').focus();
+}
+function closeNoteModal() {
+  document.getElementById('noteModal').classList.remove('visible');
+  noteModalVideoId = null;
+}
+function saveNote() {
+  if (!noteModalVideoId) return;
+  const text = document.getElementById('noteInput').value.trim();
+  const notes = loadNotes();
+  if (text) {
+    notes[noteModalVideoId] = text;
+  } else {
+    delete notes[noteModalVideoId];
+  }
+  saveNotes(notes);
+  closeNoteModal();
+  // Refresh display for current track
+  if (results[resultIndex] && results[resultIndex].videoId === noteModalVideoId) {
+    playResult(results[resultIndex]);
+  }
+  updateQueue();
+  updateHistory();
+  showToast(text ? 'Note saved' : 'Note removed');
+}
+// Close modal on overlay click
+document.addEventListener('click', e => {
+  if (e.target.id === 'noteModal') closeNoteModal();
+});
+// Close modal on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('noteModal').classList.contains('visible')) closeNoteModal();
+});
+
+// --- YouTube view count ---
+const viewCountCache = {};
+async function fetchViewCount(videoId) {
+  if (viewCountCache[videoId] !== undefined) return viewCountCache[videoId];
+  try {
+    const resp = await fetch(`https://returnyoutubedislikeapi.com/votes?videoId=${videoId}`);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const count = data.viewCount;
+    viewCountCache[videoId] = count;
+    return count;
+  } catch {
+    return null;
+  }
+}
+function formatViewCount(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(n);
+}
 
 function getToken() {
   return localStorage.getItem('discogs_token') || '';
@@ -1066,6 +1242,45 @@ function playResult(r) {
     meta.appendChild(span);
   });
 
+  // View count tag (async)
+  const viewTag = document.createElement('span');
+  viewTag.className = 'tag';
+  viewTag.innerHTML = '<span class="tag-label">Views</span>...';
+  meta.appendChild(viewTag);
+  fetchViewCount(r.videoId).then(count => {
+    if (count !== null && count !== undefined) {
+      viewTag.innerHTML = `<span class="tag-label">Views</span>${formatViewCount(count)}`;
+    } else {
+      viewTag.innerHTML = '<span class="tag-label">Views</span>N/A';
+    }
+  });
+
+  // Favorite button
+  const favBtn = document.createElement('span');
+  favBtn.className = 'tag tag-fav' + (isFavorite(r.videoId) ? ' active' : '');
+  favBtn.textContent = isFavorite(r.videoId) ? '\u2605' : '\u2606';
+  favBtn.title = 'Toggle favorite';
+  favBtn.onclick = () => {
+    const nowFav = toggleFavorite(r.videoId, r.title);
+    favBtn.textContent = nowFav ? '\u2605' : '\u2606';
+    favBtn.classList.toggle('active', nowFav);
+    updateQueue();
+    updateHistory();
+    showToast(nowFav ? 'Added to favorites' : 'Removed from favorites');
+  };
+  meta.appendChild(favBtn);
+
+  // Note button
+  const noteText = getNote(r.videoId);
+  const noteBtn = document.createElement('span');
+  noteBtn.className = 'tag tag-note' + (noteText ? ' has-note' : '');
+  noteBtn.innerHTML = noteText
+    ? `<span class="tag-label">\u270E</span>${noteText.slice(0, 30)}${noteText.length > 30 ? '...' : ''}`
+    : '\u270E';
+  noteBtn.title = noteText || 'Add note';
+  noteBtn.onclick = () => openNoteModal(r.videoId, r.title);
+  meta.appendChild(noteBtn);
+
   // "More like this" button - sets filters from track metadata
   const moreBtn = document.createElement('span');
   moreBtn.className = 'tag tag-btn';
@@ -1091,6 +1306,18 @@ function playResult(r) {
     link.style.color = 'inherit';
     meta.appendChild(link);
   }
+
+  // WhoSampled search link
+  const wsQuery = encodeURIComponent(r.title.replace(/\s*\(.*?\)\s*/g, '').trim());
+  const wsLink = document.createElement('a');
+  wsLink.href = `https://www.whosampled.com/search/tracks/?q=${wsQuery}`;
+  wsLink.target = '_blank';
+  wsLink.rel = 'noopener';
+  wsLink.className = 'tag tag-btn';
+  wsLink.innerHTML = '<span class="tag-label">WhoSampled</span>Search';
+  wsLink.style.textDecoration = 'none';
+  wsLink.style.color = 'inherit';
+  meta.appendChild(wsLink);
 
   updateHistory();
 }
@@ -1143,8 +1370,10 @@ function updateQueue() {
   results.forEach((r, i) => {
     const div = document.createElement('div');
     div.className = 'queue-item' + (i === resultIndex ? ' active' : '');
+    const favMark = isFavorite(r.videoId) ? '<span class="fav-indicator">\u2605</span>' : '';
+    const noteMark = getNote(r.videoId) ? '<span class="note-indicator">\u270E</span>' : '';
     div.innerHTML = `
-      <span class="qi-title">${r.title}</span>
+      <span class="qi-title">${r.title}${favMark}${noteMark}</span>
       <span class="qi-tags">
         ${r.genre ? `<span class="qi-tag">${r.genre.split(',')[0]}</span>` : ''}
         ${r.year ? `<span class="qi-tag">${r.year}</span>` : ''}
@@ -1167,8 +1396,10 @@ function updateHistory() {
     div.className = 'history-item';
     const isCurrent = results[resultIndex] && r.videoId === results[resultIndex].videoId;
     if (isCurrent) div.classList.add('active');
+    const hFav = isFavorite(r.videoId) ? '<span class="fav-indicator">\u2605</span>' : '';
+    const hNote = getNote(r.videoId) ? '<span class="note-indicator">\u270E</span>' : '';
     div.innerHTML = `
-      <span class="hi-title">${r.title}</span>
+      <span class="hi-title">${r.title}${hFav}${hNote}</span>
       <span class="hi-tags">
         ${r.genre ? `<span class="hi-tag">${r.genre.split(',')[0]}</span>` : ''}
         ${r.year ? `<span class="hi-tag">${r.year}</span>` : ''}
