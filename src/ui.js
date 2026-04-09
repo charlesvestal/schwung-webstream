@@ -27,6 +27,7 @@ const MAX_MENU_RESULTS = 20;
 const MAX_SEARCH_HISTORY = 20;
 const SEARCH_HISTORY_PATH = '/data/UserData/schwung/config/webstream_search_history.json';
 const CRATEDIG_FILTER_PATH = '/data/UserData/schwung/config/webstream_cratedig_filter.json';
+const FAVORITES_PATH = '/data/UserData/schwung/config/webstream_favorites.json';
 const LEGACY_SEARCH_HISTORY_PATH = '/data/UserData/schwung/webstream_search_history.json';
 const LEGACY_SEARCH_HISTORY_PATH_2 = '/data/UserData/schwung/yt_search_history.json';
 const SPINNER = ['-', '/', '|', '\\'];
@@ -140,6 +141,7 @@ let selectedIndex = 0;
 let statusMessage = 'Click: select';
 let results = [];
 let searchHistory = [];
+let favorites = [];
 let shiftHeld = false;
 
 let menuState = createMenuState();
@@ -342,6 +344,54 @@ function saveSearchHistoryToDisk() {
   }
 
   writeTextFile(SEARCH_HISTORY_PATH, payload);
+}
+
+function loadFavoritesFromDisk() {
+  try {
+    const raw = std.loadFile(FAVORITES_PATH);
+    if (!raw) { favorites = []; return; }
+    const parsed = JSON.parse(raw);
+    favorites = Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    favorites = [];
+  }
+}
+
+function saveFavoritesToDisk() {
+  const payload = `${JSON.stringify(favorites)}\n`;
+  const tmpPath = `${FAVORITES_PATH}.tmp`;
+  if (writeTextFile(tmpPath, payload)) {
+    if (typeof os.rename === 'function') {
+      const rc = os.rename(tmpPath, FAVORITES_PATH);
+      if (rc === 0) return;
+    }
+    writeTextFile(FAVORITES_PATH, payload);
+    if (typeof os.remove === 'function') os.remove(tmpPath);
+    return;
+  }
+  writeTextFile(FAVORITES_PATH, payload);
+}
+
+function isFavorite(url) {
+  return favorites.some(f => f.url === url);
+}
+
+function toggleFavorite(r) {
+  if (!r || !r.url) return;
+  const idx = favorites.findIndex(f => f.url === r.url);
+  if (idx >= 0) {
+    favorites.splice(idx, 1);
+  } else {
+    favorites.unshift({
+      url: r.url,
+      title: r.title || '',
+      channel: r.channel || '',
+      provider: r.provider || '',
+      meta_genre: r.meta_genre || '',
+      meta_year: r.meta_year || ''
+    });
+  }
+  saveFavoritesToDisk();
 }
 
 function loadCratedigFilterFromDisk() {
@@ -794,8 +844,102 @@ function openNowPlayingMenu() {
   if (r.meta_country) items.push(createAction(`Country: ${r.meta_country}`, noop));
   if (r.meta_year) items.push(createAction(`Year: ${r.meta_year}`, noop));
 
+  if (r.url) {
+    const favLabel = isFavorite(r.url) ? '[Remove Favorite]' : '[Add Favorite]';
+    items.push(createAction(favLabel, function() {
+      toggleFavorite(r);
+      /* Refresh menu to update label */
+      menuStack.pop();
+      openNowPlayingMenu();
+    }));
+    items.push(createAction('[Open in Wave Edit]', function() {
+      const status = host_module_get_param('download_status');
+      if (status === 'downloading') {
+        openDownloadStatusMenu();
+        return;
+      }
+      host_module_set_param('download_wav', r.title || r.channel || 'webstream');
+      openDownloadStatusMenu();
+    }));
+  }
+
   menuStack.push({ title: 'Now Playing', items, selectedIndex: 0 });
   menuState.selectedIndex = 0;
+  needsRedraw = true;
+}
+
+let downloadPolling = false;
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+function openDownloadStatusMenu() {
+  downloadPolling = true;
+  menuStack.push({ title: 'Download', items: [createAction('Downloading...', () => {})], selectedIndex: 0 });
+  menuState.selectedIndex = 0;
+  needsRedraw = true;
+}
+
+function pollDownloadStatus() {
+  if (!downloadPolling) return;
+  const status = host_module_get_param('download_status') || 'idle';
+
+  const items = [];
+
+  if (status === 'downloading') {
+    const progress = parseInt(host_module_get_param('download_progress') || '0', 10);
+    const sizeStr = progress > 0 ? ' (' + formatBytes(progress) + ')' : '';
+    items.push(createAction('Downloading...' + sizeStr, () => {}));
+    items.push(createAction('[Cancel]', function() {
+      host_module_set_param('download_cancel', 'trigger');
+    }));
+  } else if (status === 'done') {
+    const path = host_module_get_param('download_path') || '';
+    const filename = path.split('/').pop() || 'file';
+    items.push(createAction('Saved: ' + filename, () => {}));
+    if (typeof host_open_file_in_tool === 'function') {
+      items.push(createAction('[Open in Wave Edit]', function() {
+        downloadPolling = false;
+        host_open_file_in_tool(path, 'waveform-editor');
+      }));
+    }
+    items.push(createAction('[Back]', function() {
+      downloadPolling = false;
+      menuStack.pop();
+      menuState.selectedIndex = 0;
+      needsRedraw = true;
+    }));
+    downloadPolling = false;
+  } else if (status === 'error') {
+    const err = host_module_get_param('download_error') || 'unknown error';
+    items.push(createAction('Error: ' + err, () => {}));
+    items.push(createAction('[Back]', function() {
+      downloadPolling = false;
+      menuStack.pop();
+      menuState.selectedIndex = 0;
+      needsRedraw = true;
+    }));
+    downloadPolling = false;
+  } else if (status === 'cancelled') {
+    items.push(createAction('Download cancelled', () => {}));
+    items.push(createAction('[Back]', function() {
+      downloadPolling = false;
+      menuStack.pop();
+      menuState.selectedIndex = 0;
+      needsRedraw = true;
+    }));
+    downloadPolling = false;
+  } else {
+    items.push(createAction('Starting download...', () => {}));
+  }
+
+  const top = menuStack.current();
+  if (top && top.title === 'Download') {
+    top.items = items;
+  }
   needsRedraw = true;
 }
 
@@ -836,6 +980,47 @@ function openSampletteHistoryMenu() {
   }
 
   menuStack.push({ title: 'History', items, selectedIndex: 0 });
+  menuState.selectedIndex = 0;
+  needsRedraw = true;
+}
+
+function openFavoritesMenu() {
+  loadFavoritesFromDisk();
+  if (favorites.length === 0) {
+    menuStack.push({
+      title: 'Favorites',
+      items: [createAction('[Back]', function() { navigateCratedigBack(); }), createAction('(No favorites yet)', function() {})],
+      selectedIndex: 0
+    });
+    menuState.selectedIndex = 0;
+    needsRedraw = true;
+    return;
+  }
+
+  const items = [];
+  const count = Math.min(favorites.length, MAX_MENU_RESULTS);
+  for (let i = 0; i < count; i++) {
+    const row = favorites[i];
+    const title = cleanLabel(row.title || 'Favorite ' + (i + 1));
+    const meta = [];
+    if (row.meta_genre) meta.push(cleanLabel(row.meta_genre, 10));
+    if (row.meta_year) meta.push(row.meta_year);
+    const suffix = meta.length > 0 ? ' [' + meta.join(' ') + ']' : '';
+    items.push(
+      createAction(title + suffix, (function(r) { return function() {
+        if (!r || !r.url) return;
+        host_module_set_param('stream_provider', r.provider || 'youtube');
+        host_module_set_param('stream_url', r.url);
+        while (menuStack.depth() > 1) menuStack.pop();
+        menuState.selectedIndex = 0;
+        statusMessage = 'Loading...';
+        needsRedraw = true;
+      }; })(row))
+    );
+  }
+
+  items.unshift(createAction('[Back]', function() { navigateCratedigBack(); }));
+  menuStack.push({ title: 'Favorites', items, selectedIndex: 0 });
   menuState.selectedIndex = 0;
   needsRedraw = true;
 }
@@ -941,6 +1126,7 @@ function buildCratedigRootItems() {
   }
   items.push(createAction('[Filters...]', function() { openCratedigFiltersMenu(); }));
   items.push(createAction('[History...]', function() { openCratedigHistoryMenu(); }));
+  items.push(createAction('[Favorites...]', function() { openFavoritesMenu(); }));
   items.push(createAction('Results via Discogs', function() {}));
   items.push(createAction('[Change Provider...]', function() {
     clearSearchState(true);
@@ -970,6 +1156,7 @@ function buildSampletteRootItems() {
   }
   items.push(createAction('[Filters...]', () => openSampletteFiltersMenu()));
   items.push(createAction('[History...]', () => openSampletteHistoryMenu()));
+  items.push(createAction('[Favorites...]', () => openFavoritesMenu()));
 
   items.push(createAction('[Change Provider...]', () => {
     clearSearchState(true);
@@ -1009,6 +1196,7 @@ function buildRootItems() {
   items.push(createAction('[Previous searches]', () => {
     openSearchHistoryMenu();
   }));
+  items.push(createAction('[Favorites...]', () => openFavoritesMenu()));
   if (typeof host_swap_module === 'function') {
     items.push(createAction('[Swap module]', () => host_swap_module()));
   }
@@ -1214,6 +1402,7 @@ globalThis.init = function () {
   statusMessage = 'Click: select';
   results = [];
   loadSearchHistoryFromDisk();
+  loadFavoritesFromDisk();
   loadCratedigFilterFromDisk();
   shiftHeld = false;
 
@@ -1243,6 +1432,7 @@ globalThis.tick = function () {
   tickCounter = (tickCounter + 1) % 6;
   if (tickCounter === 0) {
     refreshState();
+    pollDownloadStatus();
   }
 
   if (currentActivityLabel()) {
