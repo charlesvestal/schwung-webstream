@@ -1295,32 +1295,6 @@ function playResult(r) {
     }
   });
 
-  // Favorite button
-  const favBtn = document.createElement('span');
-  favBtn.className = 'tag tag-fav' + (isFavorite(r.videoId) ? ' active' : '');
-  favBtn.textContent = isFavorite(r.videoId) ? '\u2605' : '\u2606';
-  favBtn.title = 'Toggle favorite';
-  favBtn.onclick = () => {
-    const nowFav = toggleFavorite(r.videoId, r.title);
-    favBtn.textContent = nowFav ? '\u2605' : '\u2606';
-    favBtn.classList.toggle('active', nowFav);
-    updateQueue();
-    updateHistory();
-    showToast(nowFav ? 'Added to favorites' : 'Removed from favorites');
-  };
-  meta.appendChild(favBtn);
-
-  // Note button
-  const noteText = getNote(r.videoId);
-  const noteBtn = document.createElement('span');
-  noteBtn.className = 'tag tag-note' + (noteText ? ' has-note' : '');
-  noteBtn.innerHTML = noteText
-    ? `<span class="tag-label">\u270E</span>${noteText.slice(0, 30)}${noteText.length > 30 ? '...' : ''}`
-    : '\u270E';
-  noteBtn.title = noteText || 'Add note';
-  noteBtn.onclick = () => openNoteModal(r.videoId, r.title);
-  meta.appendChild(noteBtn);
-
   // "More like this" button - sets filters from track metadata
   const moreBtn = document.createElement('span');
   moreBtn.className = 'tag tag-btn';
@@ -1358,6 +1332,32 @@ function playResult(r) {
   wsLink.style.textDecoration = 'none';
   wsLink.style.color = 'inherit';
   meta.appendChild(wsLink);
+
+  // Favorite button
+  const favBtn = document.createElement('span');
+  favBtn.className = 'tag tag-fav' + (isFavorite(r.videoId) ? ' active' : '');
+  favBtn.textContent = isFavorite(r.videoId) ? '\u2605' : '\u2606';
+  favBtn.title = 'Toggle favorite';
+  favBtn.onclick = () => {
+    const nowFav = toggleFavorite(r.videoId, r.title);
+    favBtn.textContent = nowFav ? '\u2605' : '\u2606';
+    favBtn.classList.toggle('active', nowFav);
+    updateQueue();
+    updateHistory();
+    showToast(nowFav ? 'Added to favorites' : 'Removed from favorites');
+  };
+  meta.appendChild(favBtn);
+
+  // Note button
+  const noteText = getNote(r.videoId);
+  const noteBtn = document.createElement('span');
+  noteBtn.className = 'tag tag-note' + (noteText ? ' has-note' : '');
+  noteBtn.innerHTML = noteText
+    ? `<span class="tag-label">\u270E</span>${noteText.slice(0, 30)}${noteText.length > 30 ? '...' : ''}`
+    : '\u270E';
+  noteBtn.title = noteText || 'Add note';
+  noteBtn.onclick = () => openNoteModal(r.videoId, r.title);
+  meta.appendChild(noteBtn);
 
   updateHistory();
 }
