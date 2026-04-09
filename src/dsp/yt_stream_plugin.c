@@ -10,6 +10,7 @@
 #include <poll.h>
 #include <signal.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -157,6 +158,23 @@ typedef struct {
     uint64_t search_elapsed_ms;
     int search_count;
     search_result_t search_results[SEARCH_MAX_RESULTS];
+
+    /* WAV download */
+    pthread_t download_thread;
+    bool download_thread_valid;
+    bool download_thread_running;
+    bool download_cancel;
+    pid_t download_pid;
+    char download_status[32];       /* idle, downloading, done, error, cancelled */
+    char download_path[512];
+    char download_active_path[512]; /* path being written to (for progress) */
+    char download_error[256];
+    char download_source_url[STREAM_URL_MAX];
+    char download_source_provider[PROVIDER_MAX];
+    char download_resolved_url[STREAM_URL_MAX];
+    char download_user_agent[HTTP_HEADER_MAX];
+    char download_referer[HTTP_HEADER_MAX];
+    char download_title[SEARCH_TEXT_MAX];
 } yt_instance_t;
 
 static void append_ws_log(const char *msg) {
@@ -1965,6 +1983,7 @@ static void* v2_create_instance(const char *module_dir, const char *json_default
     pthread_mutex_init(&inst->resolve_mutex, NULL);
     pthread_mutex_init(&inst->prefetch_mutex, NULL);
     snprintf(inst->search_status, sizeof(inst->search_status), "idle");
+    snprintf(inst->download_status, sizeof(inst->download_status), "idle");
     (void)json_defaults;
     start_warmup_if_needed(inst);
 
@@ -2004,6 +2023,11 @@ static void v2_destroy_instance(void *instance) {
         pthread_join(inst->prefetch_thread, NULL);
         inst->prefetch_thread_valid = false;
         inst->prefetch_thread_running = false;
+    }
+
+    if (inst->download_thread_valid) {
+        pthread_join(inst->download_thread, NULL);
+        inst->download_thread_valid = false;
     }
 
     pthread_mutex_lock(&inst->daemon_mutex);
@@ -2053,6 +2077,187 @@ static bool allow_trigger(uint64_t *last_ms, uint64_t debounce_ms) {
     }
     *last_ms = now;
     return true;
+}
+
+/* ---- WAV download -------------------------------------------------------- */
+
+#define DOWNLOAD_DIR "/data/UserData/UserLibrary/Samples/Schwung/Webstream"
+
+static void sanitize_filename(const char *in, char *out, size_t out_len) {
+    size_t j = 0;
+    for (size_t i = 0; in[i] && j < out_len - 1; i++) {
+        char c = in[i];
+        if (c == '/' || c == '\\' || c == ':' || c == '*' || c == '?' ||
+            c == '"' || c == '<' || c == '>' || c == '|')
+            c = '_';
+        out[j++] = c;
+    }
+    out[j] = '\0';
+    while (j > 0 && (out[j-1] == ' ' || out[j-1] == '.')) out[--j] = '\0';
+}
+
+static int download_spawn(yt_instance_t *inst, const char *cmd) {
+    pid_t pid = fork();
+    if (pid < 0) return -1;
+    if (pid == 0) {
+        (void)setpgid(0, 0);
+        execl("/bin/sh", "sh", "-c", cmd, (char *)NULL);
+        _exit(127);
+    }
+    inst->download_pid = pid;
+    return 0;
+}
+
+static void download_kill(yt_instance_t *inst) {
+    if (inst->download_pid > 0) {
+        kill(-inst->download_pid, SIGTERM); /* kill process group */
+        kill(inst->download_pid, SIGKILL);
+        waitpid(inst->download_pid, NULL, 0);
+        inst->download_pid = -1;
+    }
+}
+
+static void *download_thread_main(void *arg) {
+    yt_instance_t *inst = (yt_instance_t *)arg;
+    char cmd[8192];
+    char safe_title[SEARCH_TEXT_MAX];
+    char out_path[512];
+    int status;
+
+    yt_log("download_thread: starting");
+
+    /* mkdir -p equivalent */
+    mkdir("/data/UserData/UserLibrary", 0755);
+    mkdir("/data/UserData/UserLibrary/Samples", 0755);
+    mkdir("/data/UserData/UserLibrary/Samples/Schwung", 0755);
+    mkdir(DOWNLOAD_DIR, 0755);
+
+    sanitize_filename(inst->download_title, safe_title, sizeof(safe_title));
+    if (safe_title[0] == '\0') snprintf(safe_title, sizeof(safe_title), "download");
+
+    snprintf(out_path, sizeof(out_path), "%s/%s.wav", DOWNLOAD_DIR, safe_title);
+
+    /* Avoid overwriting: append number if file exists */
+    {
+        FILE *probe = fopen(out_path, "r");
+        if (probe) {
+            fclose(probe);
+            for (int n = 2; n < 100; n++) {
+                snprintf(out_path, sizeof(out_path), "%s/%s (%d).wav",
+                         DOWNLOAD_DIR, safe_title, n);
+                probe = fopen(out_path, "r");
+                if (!probe) break;
+                fclose(probe);
+            }
+        }
+    }
+
+    /* Prefer resolved media URL (avoids re-resolving and disrupting stream) */
+    if (inst->download_resolved_url[0] != '\0') {
+        char ua_flag[512] = "";
+        char ref_flag[512] = "";
+        if (inst->download_user_agent[0] != '\0')
+            snprintf(ua_flag, sizeof(ua_flag),
+                     "-user_agent \"%s\" ", inst->download_user_agent);
+        if (inst->download_referer[0] != '\0')
+            snprintf(ref_flag, sizeof(ref_flag),
+                     "-referer \"%s\" ", inst->download_referer);
+
+        snprintf(cmd, sizeof(cmd),
+            "\"%s/bin/ffmpeg\" -hide_banner -loglevel warning "
+            "%s%s"
+            "-i '%s' -vn -sn -dn "
+            "-af \"aresample=44100\" "
+            "-ac 2 -ar 44100 '%s' -y "
+            "2>>" WS_RUNTIME_LOG_PATH,
+            inst->module_dir, ua_flag, ref_flag,
+            inst->download_resolved_url, out_path);
+        yt_log("download_thread: using resolved URL");
+    } else {
+        /* Fallback: use yt-dlp (will re-resolve) */
+        char provider[PROVIDER_MAX];
+        const char *legacy_fmt = "bestaudio[ext=m4a]/bestaudio";
+        const char *extractor_args = "--extractor-args \"youtube:player_skip=js\" ";
+        normalize_provider_value(inst->download_source_provider, provider, sizeof(provider));
+        if (strcmp(provider, "soundcloud") == 0) {
+            legacy_fmt = "http_mp3_1_0/hls_mp3_1_0/bestaudio";
+            extractor_args = "";
+        }
+        snprintf(cmd, sizeof(cmd),
+            "\"%s/bin/yt-dlp\" --no-playlist "
+            "%s"
+            "-f \"%s\" -o - '%s' 2>/dev/null | "
+            "\"%s/bin/ffmpeg\" -hide_banner -loglevel warning "
+            "-i pipe:0 -vn -sn -dn "
+            "-af \"aresample=44100\" "
+            "-ac 2 -ar 44100 '%s' -y "
+            "2>>" WS_RUNTIME_LOG_PATH,
+            inst->module_dir, extractor_args, legacy_fmt,
+            inst->download_source_url,
+            inst->module_dir, out_path);
+        yt_log("download_thread: using yt-dlp fallback");
+    }
+
+    if (inst->download_cancel) goto cancelled;
+
+    snprintf(inst->download_active_path, sizeof(inst->download_active_path), "%s", out_path);
+
+    if (download_spawn(inst, cmd) != 0) {
+        snprintf(inst->download_error, sizeof(inst->download_error), "failed to start download");
+        snprintf(inst->download_status, sizeof(inst->download_status), "error");
+        inst->download_thread_running = false;
+        return NULL;
+    }
+
+    /* Wait for process, checking cancel flag */
+    while (1) {
+        int w = waitpid(inst->download_pid, &status, WNOHANG);
+        if (w > 0) break;          /* process exited */
+        if (w < 0) break;          /* error */
+        if (inst->download_cancel) {
+            download_kill(inst);
+            goto cancelled;
+        }
+        usleep(200000); /* 200ms */
+    }
+    inst->download_pid = -1;
+
+    if (inst->download_cancel) goto cancelled;
+
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+        FILE *check = fopen(out_path, "r");
+        if (check) {
+            fseek(check, 0, SEEK_END);
+            long sz = ftell(check);
+            fclose(check);
+            if (sz > 44) {
+                snprintf(inst->download_path, sizeof(inst->download_path), "%s", out_path);
+                snprintf(inst->download_status, sizeof(inst->download_status), "done");
+                yt_log("download_thread: success");
+            } else {
+                snprintf(inst->download_error, sizeof(inst->download_error), "empty file");
+                snprintf(inst->download_status, sizeof(inst->download_status), "error");
+                remove(out_path);
+            }
+        } else {
+            snprintf(inst->download_error, sizeof(inst->download_error), "output not created");
+            snprintf(inst->download_status, sizeof(inst->download_status), "error");
+        }
+    } else {
+        snprintf(inst->download_error, sizeof(inst->download_error), "download failed");
+        snprintf(inst->download_status, sizeof(inst->download_status), "error");
+        remove(out_path);
+    }
+
+    inst->download_thread_running = false;
+    return NULL;
+
+cancelled:
+    remove(out_path);
+    snprintf(inst->download_status, sizeof(inst->download_status), "cancelled");
+    yt_log("download_thread: cancelled");
+    inst->download_thread_running = false;
+    return NULL;
 }
 
 static void v2_set_param(void *instance, const char *key, const char *val) {
@@ -2283,6 +2488,68 @@ static void v2_set_param(void *instance, const char *key, const char *val) {
         pthread_mutex_unlock(&inst->search_mutex);
         return;
     }
+
+    if (strcmp(key, "download_wav") == 0) {
+        if (inst->download_thread_running) return;
+        if (inst->stream_url[0] == '\0') {
+            snprintf(inst->download_error, sizeof(inst->download_error), "nothing playing");
+            snprintf(inst->download_status, sizeof(inst->download_status), "error");
+            return;
+        }
+        if (inst->download_thread_valid) {
+            pthread_join(inst->download_thread, NULL);
+            inst->download_thread_valid = false;
+        }
+
+        /* Capture stream info before stopping */
+        snprintf(inst->download_source_url, sizeof(inst->download_source_url),
+                 "%s", inst->stream_url);
+        snprintf(inst->download_source_provider, sizeof(inst->download_source_provider),
+                 "%s", inst->stream_provider);
+        pthread_mutex_lock(&inst->resolve_mutex);
+        snprintf(inst->download_resolved_url, sizeof(inst->download_resolved_url),
+                 "%s", inst->resolved_media_url);
+        snprintf(inst->download_user_agent, sizeof(inst->download_user_agent),
+                 "%s", inst->resolved_user_agent);
+        snprintf(inst->download_referer, sizeof(inst->download_referer),
+                 "%s", inst->resolved_referer);
+        pthread_mutex_unlock(&inst->resolve_mutex);
+
+        if (val[0] != '\0' && strcmp(val, "trigger") != 0) {
+            snprintf(inst->download_title, sizeof(inst->download_title), "%s", val);
+        } else {
+            snprintf(inst->download_title, sizeof(inst->download_title), "webstream");
+        }
+
+        /* Stop the stream so yt-dlp/ffmpeg don't conflict */
+        stop_stream(inst);
+        inst->paused = true;
+
+        inst->download_path[0] = '\0';
+        inst->download_error[0] = '\0';
+        inst->download_cancel = false;
+        inst->download_pid = -1;
+        inst->download_thread_running = true;
+        snprintf(inst->download_status, sizeof(inst->download_status), "downloading");
+
+        if (pthread_create(&inst->download_thread, NULL, download_thread_main, inst) == 0) {
+            inst->download_thread_valid = true;
+            yt_log("download_wav: thread started");
+        } else {
+            inst->download_thread_running = false;
+            snprintf(inst->download_error, sizeof(inst->download_error), "thread create failed");
+            snprintf(inst->download_status, sizeof(inst->download_status), "error");
+        }
+        return;
+    }
+
+    if (strcmp(key, "download_cancel") == 0) {
+        if (inst->download_thread_running) {
+            inst->download_cancel = true;
+            yt_log("download_cancel: requested");
+        }
+        return;
+    }
 }
 
 static int get_result_index(const char *key, const char *prefix) {
@@ -2343,6 +2610,25 @@ static int v2_get_param(void *instance, const char *key, char *buf, int buf_len)
     }
     if (strcmp(key, "stream_provider") == 0) {
         return snprintf(buf, (size_t)buf_len, "%s", inst ? inst->stream_provider : "youtube");
+    }
+    if (strcmp(key, "download_status") == 0) {
+        return snprintf(buf, (size_t)buf_len, "%s",
+                        inst ? inst->download_status : "idle");
+    }
+    if (strcmp(key, "download_path") == 0) {
+        return snprintf(buf, (size_t)buf_len, "%s",
+                        inst ? inst->download_path : "");
+    }
+    if (strcmp(key, "download_error") == 0) {
+        return snprintf(buf, (size_t)buf_len, "%s",
+                        inst ? inst->download_error : "");
+    }
+    if (strcmp(key, "download_progress") == 0) {
+        struct stat st;
+        if (!inst || inst->download_active_path[0] == '\0' ||
+            stat(inst->download_active_path, &st) != 0)
+            return snprintf(buf, (size_t)buf_len, "0");
+        return snprintf(buf, (size_t)buf_len, "%ld", (long)st.st_size);
     }
     if (strcmp(key, "stream_status") == 0) {
         size_t avail;
