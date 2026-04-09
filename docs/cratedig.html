@@ -360,7 +360,7 @@
   }
   .queue-item:hover, .history-item:hover { background: var(--surface2); }
   .queue-item.active, .history-item.active { border-left-color: var(--accent); }
-  .qi-title, .hi-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .qi-title, .hi-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
   .qi-tags, .hi-tags {
     display: flex;
     gap: 0.3rem;
@@ -384,6 +384,23 @@
     margin-bottom: 0.4rem;
   }
   .history-header h3 { margin-bottom: 0; }
+  .history-tabs {
+    display: flex;
+    gap: 0;
+  }
+  .history-tab {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    border-bottom: 2px solid transparent;
+  }
+  .history-tab:hover { color: var(--text); }
+  .history-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
   .clear-history-btn {
     background: none;
     border: none;
@@ -393,6 +410,25 @@
     text-decoration: underline;
   }
   .clear-history-btn:hover { color: var(--text); }
+  .hi-actions {
+    display: flex;
+    gap: 0.3rem;
+    margin-left: 0.5rem;
+    flex-shrink: 0;
+  }
+  .hi-action {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    transition: border-color 0.15s, color 0.15s;
+    background: none;
+  }
+  .hi-action:hover { border-color: var(--accent); color: var(--text); }
+  .hi-action.fav-active { color: var(--accent); }
+  .hi-action.note-has { color: var(--accent-dim); }
 
   .token-area {
     text-align: center;
@@ -559,8 +595,11 @@
 
 <div class="history" id="historySection" style="display:none">
   <div class="history-header">
-    <h3>History</h3>
-    <button class="clear-history-btn" onclick="clearHistory()">Clear</button>
+    <div class="history-tabs">
+      <button class="history-tab active" id="tabHistory" onclick="switchHistoryTab('history')">History</button>
+      <button class="history-tab" id="tabFavorites" onclick="switchHistoryTab('favorites')">Favorites</button>
+    </div>
+    <button class="clear-history-btn" id="clearHistoryBtn" onclick="clearHistory()">Clear</button>
   </div>
   <div class="history-list" id="historyList"></div>
 </div>
@@ -652,6 +691,7 @@ let resultIndex = 0;
 let digging = false;
 let history = [];
 let rateLimitRemaining = null;
+let historyTab = 'history'; // 'history' or 'favorites'
 
 function loadHistory() {
   try { history = JSON.parse(localStorage.getItem('cratedig_history')) || []; } catch { history = []; }
@@ -1383,38 +1423,79 @@ function updateQueue() {
   });
 }
 
+function switchHistoryTab(tab) {
+  historyTab = tab;
+  document.getElementById('tabHistory').classList.toggle('active', tab === 'history');
+  document.getElementById('tabFavorites').classList.toggle('active', tab === 'favorites');
+  document.getElementById('clearHistoryBtn').style.display = tab === 'favorites' ? 'none' : '';
+  updateHistory();
+}
+
 function updateHistory() {
   const section = document.getElementById('historySection');
   const list = document.getElementById('historyList');
-  if (!history.length) { section.style.display = 'none'; return; }
+
+  // Always show section if there's history or favorites
+  const favs = loadFavorites();
+  const hasFavs = Object.keys(favs).length > 0;
+  if (!history.length && !hasFavs) { section.style.display = 'none'; return; }
   section.style.display = 'block';
   list.innerHTML = '';
-  // Show newest first, limit to 20 visible
-  const visible = history.slice(-20).reverse();
+
+  let visible;
+  if (historyTab === 'favorites') {
+    // Show only favorited items from history, newest first
+    visible = history.filter(r => isFavorite(r.videoId)).slice(-20).reverse();
+    if (!visible.length) {
+      list.innerHTML = '<div style="color:var(--text-dim);font-size:0.8rem;padding:0.5rem 0;">No favorites yet</div>';
+      return;
+    }
+  } else {
+    visible = history.slice(-20).reverse();
+  }
+
   visible.forEach(r => {
     const div = document.createElement('div');
     div.className = 'history-item';
     const isCurrent = results[resultIndex] && r.videoId === results[resultIndex].videoId;
     if (isCurrent) div.classList.add('active');
-    const hFav = isFavorite(r.videoId) ? '<span class="fav-indicator">\u2605</span>' : '';
-    const hNote = getNote(r.videoId) ? '<span class="note-indicator">\u270E</span>' : '';
     div.innerHTML = `
-      <span class="hi-title">${r.title}${hFav}${hNote}</span>
+      <span class="hi-title">${r.title}</span>
       <span class="hi-tags">
         ${r.genre ? `<span class="hi-tag">${r.genre.split(',')[0]}</span>` : ''}
         ${r.year ? `<span class="hi-tag">${r.year}</span>` : ''}
         ${r.country ? `<span class="hi-tag">${r.country}</span>` : ''}
+      </span>
+      <span class="hi-actions">
+        <span class="hi-action ${isFavorite(r.videoId) ? 'fav-active' : ''}" data-action="fav" title="Toggle favorite">${isFavorite(r.videoId) ? '\u2605' : '\u2606'}</span>
+        <span class="hi-action ${getNote(r.videoId) ? 'note-has' : ''}" data-action="note" title="${getNote(r.videoId) || 'Add note'}">\u270E</span>
       </span>`;
+    // Click on row plays the track
     div.onclick = () => playResult(r);
+    // Fav button
+    div.querySelector('[data-action="fav"]').onclick = (e) => {
+      e.stopPropagation();
+      const nowFav = toggleFavorite(r.videoId, r.title);
+      updateQueue();
+      updateHistory();
+      showToast(nowFav ? 'Added to favorites' : 'Removed from favorites');
+    };
+    // Note button
+    div.querySelector('[data-action="note"]').onclick = (e) => {
+      e.stopPropagation();
+      openNoteModal(r.videoId, r.title);
+    };
     list.appendChild(div);
   });
 }
 
 function clearHistory() {
-  history = [];
+  // Preserve favorited items
+  const preserved = history.filter(r => isFavorite(r.videoId));
+  history = preserved;
   saveHistory();
   updateHistory();
-  showToast('History cleared');
+  showToast(preserved.length ? 'History cleared (favorites kept)' : 'History cleared');
 }
 
 // Keyboard shortcuts
