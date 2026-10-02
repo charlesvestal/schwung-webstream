@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DSP_C="$ROOT_DIR/src/dsp/yt_stream_plugin.c"
-UI_JS="$ROOT_DIR/src/ui.js"
+UI_JS="$ROOT_DIR/src/browser.js"
 DAEMON_PY="$ROOT_DIR/src/bin/yt_dlp_daemon.py"
 
 fail=0
@@ -38,19 +38,22 @@ for field in cratedig_result_index cratedig_auto_advance cratedig_pending_filter
   fi
 done
 
-# UI exposes cratedig provider
+# The browse page offers Crate Dig and its four filters (tables + picker);
+# what they SEND is driven in tests/test_browse_page.sh.
 if ! rg -q "'cratedig'" "$UI_JS"; then
-  echo "FAIL: ui.js should expose cratedig provider"
+  echo "FAIL: browser.js should expose cratedig provider"
   fail=1
 fi
-
-# UI has filter menus
-for fn in openCratedigGenreMenu openCratedigStyleMenu openCratedigDecadeMenu openCratedigCountryMenu; do
-  if ! rg -q "function ${fn}" "$UI_JS"; then
-    echo "FAIL: ui.js should implement ${fn}()"
+for table in CRATEDIG_GENRES CRATEDIG_STYLES CRATEDIG_DECADES CRATEDIG_COUNTRIES; do
+  if ! rg -q "const ${table} =" "$UI_JS"; then
+    echo "FAIL: browser.js should define ${table}"
     fail=1
   fi
 done
+if ! rg -q "kind: 'dig_pick'" "$UI_JS"; then
+  echo "FAIL: browser.js should implement the filter pickers"
+  fail=1
+fi
 
 if [[ "$fail" -ne 0 ]]; then
   exit 1

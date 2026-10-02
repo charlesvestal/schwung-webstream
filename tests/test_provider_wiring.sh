@@ -3,32 +3,19 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DSP_C="$ROOT_DIR/src/dsp/yt_stream_plugin.c"
-UI_JS="$ROOT_DIR/src/ui.js"
+UI_JS="$ROOT_DIR/src/browser.js"
 DAEMON_PY="$ROOT_DIR/src/bin/yt_dlp_daemon.py"
 
 fail=0
 
 for provider in youtube freesound archive soundcloud; do
   if ! rg -q "'${provider}'" "$UI_JS"; then
-    echo "FAIL: ui.js should expose provider '${provider}'"
+    echo "FAIL: browser.js should expose provider '${provider}'"
     fail=1
   fi
 done
-
-if ! rg -q "host_module_set_param\\('search_provider'" "$UI_JS"; then
-  echo "FAIL: ui.js should set search_provider before search_query"
-  fail=1
-fi
-
-if ! rg -q "host_module_set_param\\('stream_provider'" "$UI_JS"; then
-  echo "FAIL: ui.js should set stream_provider before stream_url"
-  fail=1
-fi
-
-if ! rg -q "function openProviderMenu\\(" "$UI_JS"; then
-  echo "FAIL: ui.js should implement provider picker menu"
-  fail=1
-fi
+# The ORDER (search_provider before search_query, stream_provider before
+# stream_url) is driven in tests/test_browse_page.sh, not grepped.
 
 if ! rg -Fq '"SEARCH\t%s\t%d\t%s\n"' "$DSP_C"; then
   echo "FAIL: DSP search request should include provider"

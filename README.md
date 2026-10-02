@@ -13,7 +13,8 @@ Third-party, unsupported community module. Not affiliated with or endorsed by Ab
   - search results list
 - Starts streaming when a result is selected
 - Uses a warm `yt-dlp` daemon for search/URL resolve, then `ffmpeg` decode to 44.1kHz stereo `s16le`
-- Supports transport controls (play/pause, seek ±15s, stop, restart) via mapped knobs
+- The first page, Browse, is the search and results browser (drawn like Schwung's own lists; click to enter)
+- Transport on knobs 1–6 on every page and in the chain editor: play/pause, ±15s, gain, stop, restart
 - Current providers:
   - `youtube` (via `yt-dlp`)
   - `soundcloud` (via `yt-dlp`)
