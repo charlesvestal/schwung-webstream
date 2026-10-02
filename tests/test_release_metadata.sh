@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODULE_JSON="$ROOT_DIR/src/module.json"
 RELEASE_JSON="$ROOT_DIR/release.json"
-REPO="charlesvestal/move-anything-webstream"
+REPO="charlesvestal/schwung-webstream"
 
 module_version="$(jq -r '.version' "$MODULE_JSON")"
 release_version="$(jq -r '.version' "$RELEASE_JSON")"
