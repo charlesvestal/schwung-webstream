@@ -32,10 +32,14 @@
  * threaded process can deadlock.
  */
 #define WS_WORK_DIR "/data/UserData/schwung/cache/webstream"
-static char *const ws_child_env[] = {
+/* PATH leads with the module's own bin/ (set in create_instance), so yt-dlp
+ * finds the bundled deno -- its JavaScript runtime for YouTube, which it looks
+ * up on PATH and which went unused while PATH was MoveOriginal's. */
+static char ws_path_env[600] = "PATH=/sbin:/usr/sbin:/bin:/usr/bin";
+static char *ws_child_env[] = {
     "HOME=" WS_WORK_DIR,
     "XDG_CACHE_HOME=" WS_WORK_DIR "/.cache",
-    "PATH=/sbin:/usr/sbin:/bin:/usr/bin",
+    ws_path_env,
     NULL
 };
 static void ws_ensure_work_dir(void) {
@@ -2006,6 +2010,8 @@ static void* v2_create_instance(const char *module_dir, const char *json_default
     if (!inst) return NULL;
 
     snprintf(inst->module_dir, sizeof(inst->module_dir), "%s", module_dir ? module_dir : ".");
+    snprintf(ws_path_env, sizeof(ws_path_env), "PATH=%s/bin:/sbin:/usr/sbin:/bin:/usr/bin",
+             inst->module_dir);
     snprintf(inst->stream_provider, sizeof(inst->stream_provider), "youtube");
     snprintf(inst->search_provider, sizeof(inst->search_provider), "youtube");
     inst->stream_url[0] = '\0';
