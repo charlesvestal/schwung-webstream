@@ -2049,11 +2049,19 @@ static void v2_on_midi(void *instance, const uint8_t *msg, int len, int source) 
     (void)source;
 }
 
-/* Accept new enum trigger values and legacy numeric step counters. */
+/*
+ * Is this write a press?
+ *
+ * The host's knob-grid trigger writes option 1 of ["idle","trigger"] -- as the
+ * NAME "trigger", or as the INDEX "1" when it has not learned the wire format
+ * (a write-only trigger cell is never read). Every press writes the SAME
+ * value. This used to read a number as a step counter that fires only when it
+ * goes UP, so the first "1" fired and every later "1" was dropped: the grid's
+ * Play/Pause, Stop, Restart, +/-15s and Next worked once per load and then did
+ * nothing. A non-zero number is a press (a rising legacy counter still is), 0
+ * is idle. This module's own UI always writes "trigger" and is unaffected.
+ */
 static bool parse_trigger_value(const char *val, int *legacy_step_state) {
-    int step;
-    int prev;
-
     if (!val || !legacy_step_state) return false;
 
     if (strcmp(val, "trigger") == 0 || strcmp(val, "on") == 0) {
@@ -2063,10 +2071,8 @@ static bool parse_trigger_value(const char *val, int *legacy_step_state) {
         return false;
     }
 
-    step = atoi(val);
-    prev = *legacy_step_state;
-    *legacy_step_state = step;
-    return step > prev;
+    *legacy_step_state = atoi(val);
+    return *legacy_step_state != 0;
 }
 
 static bool allow_trigger(uint64_t *last_ms, uint64_t debounce_ms) {
