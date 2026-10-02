@@ -7,8 +7,6 @@
   "description": "Web audio search and streaming generator with provider backends",
   "author": "charlesvestal",
   "license": "MIT",
-  "ui": "ui.js",
-  "ui_chain": "ui.js",
   "dsp": "dsp.so",
   "api_version": 2,
   "capabilities": {
@@ -17,72 +15,7 @@
     "midi_in": false,
     "midi_out": false,
     "chainable": true,
-    "component_type": "sound_generator",
-    "chain_params": [
-      {
-        "key": "play_pause_step",
-        "short_name": "Pause",
-        "name": "Play/Pause",
-        "type": "enum",
-        "options": [
-          "idle",
-          "trigger"
-        ],
-        "default": "idle"
-      },
-      {
-        "key": "rewind_15_step",
-        "short_name": "Rewind",
-        "name": "Rewind 15s",
-        "type": "enum",
-        "options": [
-          "idle",
-          "trigger"
-        ],
-        "default": "idle"
-      },
-      {
-        "key": "forward_15_step",
-        "short_name": "Forward",
-        "name": "Forward 15s",
-        "type": "enum",
-        "options": [
-          "idle",
-          "trigger"
-        ],
-        "default": "idle"
-      },
-      {
-        "key": "gain",
-        "name": "Gain",
-        "type": "float",
-        "min": 0.0,
-        "max": 2.0,
-        "default": 1.0,
-        "step": 0.05
-      },
-      {
-        "key": "stop_step",
-        "name": "Stop",
-        "type": "enum",
-        "options": [
-          "idle",
-          "trigger"
-        ],
-        "default": "idle"
-      },
-      {
-        "key": "restart_step",
-        "short_name": "RSTRT",
-        "name": "Restart",
-        "type": "enum",
-        "options": [
-          "idle",
-          "trigger"
-        ],
-        "default": "idle"
-      }
-    ]
+    "component_type": "sound_generator"
   },
   "defaults": {
     "gain": 1.0

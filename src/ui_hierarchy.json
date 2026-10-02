@@ -1,0 +1,24 @@
+{
+  "levels": {
+    "root": {
+      "name": "Webstream",
+      "knobs": [
+        "play_pause_step",
+        "rewind_15_step",
+        "forward_15_step",
+        "gain",
+        "stop_step",
+        "restart_step"
+      ],
+      "params": [
+        "browse",
+        "play_pause_step",
+        "rewind_15_step",
+        "forward_15_step",
+        "gain",
+        "stop_step",
+        "restart_step"
+      ]
+    }
+  }
+}
