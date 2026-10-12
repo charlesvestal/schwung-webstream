@@ -28,8 +28,12 @@ handler() {  # print one set_param key's branch
 handler cratedig_filter | grep -q 'cratedig_autoplay_armed = true' \
   || { echo "FAIL: Dig! (cratedig_filter) must arm autoplay"; fail=1; }
 
-handler stream_url | grep -q 'cratedig_autoplay_armed = false' \
+body cancel_dig_autoplay | grep -q 'cratedig_autoplay_armed = false' \
+  || { echo "FAIL: cancel_dig_autoplay must disarm"; fail=1; }
+handler stream_url | grep -q 'cancel_dig_autoplay(inst)' \
   || { echo "FAIL: an explicit stream_url pick must disarm an in-flight Dig!"; fail=1; }
+body stop_everything | grep -q 'cancel_dig_autoplay(inst)' \
+  || { echo "FAIL: Stop must disarm an in-flight Dig!"; fail=1; }
 
 search="$(body search_thread_main)"
 grep -q 'cratedig_autoplay_ready, 1' <<<"$search" \

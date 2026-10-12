@@ -871,8 +871,17 @@ static void seek_relative_seconds(yt_instance_t *inst, long delta_sec) {
     inst->played_samples = (size_t)inst->play_abs;
 }
 
+/* A user's own pick or Stop outranks an in-flight Dig!. */
+static void cancel_dig_autoplay(yt_instance_t *inst) {
+    pthread_mutex_lock(&inst->search_mutex);
+    inst->cratedig_autoplay_armed = false;
+    pthread_mutex_unlock(&inst->search_mutex);
+    __atomic_store_n(&inst->cratedig_autoplay_ready, 0, __ATOMIC_RELEASE);
+}
+
 static void stop_everything(yt_instance_t *inst) {
     if (!inst) return;
+    cancel_dig_autoplay(inst);
     inst->stream_url[0] = '\0';
     inst->stream_eof = false;
     inst->restart_countdown = 0;
@@ -2399,10 +2408,7 @@ static void v2_set_param(void *instance, const char *key, const char *val) {
         }
 
         /* The user picked something: an in-flight Dig! must not replace it. */
-        pthread_mutex_lock(&inst->search_mutex);
-        inst->cratedig_autoplay_armed = false;
-        pthread_mutex_unlock(&inst->search_mutex);
-        __atomic_store_n(&inst->cratedig_autoplay_ready, 0, __ATOMIC_RELEASE);
+        cancel_dig_autoplay(inst);
 
         snprintf(clean_provider, sizeof(clean_provider), "%s", inst->stream_provider);
         infer_provider_from_url(clean_url, clean_provider, sizeof(clean_provider));
