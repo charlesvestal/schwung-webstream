@@ -165,6 +165,13 @@ typedef struct {
 
     int cratedig_result_index;
     bool cratedig_auto_advance;
+    /* Dig! plays what it finds, as digging a crate should: the press ARMS
+     * (under search_mutex), the search thread turns a successful Crate Dig
+     * answer into READY, and the render path -- the thread that already
+     * switches tracks on EOF -- plays result 0. The search thread never
+     * touches the stream itself. A user's own pick disarms it. */
+    bool cratedig_autoplay_armed;
+    int cratedig_autoplay_ready;
     int next_track_step;
     uint64_t last_next_track_ms;
     char cratedig_pending_filter[2048];
@@ -1473,6 +1480,17 @@ static void* search_thread_main(void *arg) {
              local_err[0] ? local_err : "-");
     yt_log(log_msg);
 
+    /* Any answer settles an armed Dig!: a crate plays its first record, and
+     * anything else (no results, an error, a text search that superseded it)
+     * leaves the stream alone. */
+    if (inst->cratedig_autoplay_armed) {
+        inst->cratedig_autoplay_armed = false;
+        if (rc == 0 && local_count > 0 && strcmp(provider, "cratedig") == 0) {
+            inst->cratedig_result_index = 0;
+            __atomic_store_n(&inst->cratedig_autoplay_ready, 1, __ATOMIC_RELEASE);
+        }
+    }
+
     start_next = 0;
     next_provider[0] = '\0';
     next_query[0] = '\0';
@@ -2310,6 +2328,40 @@ cancelled:
     return NULL;
 }
 
+/*
+ * Play search result idx from the start, as Crate Dig's Next and Dig! do.
+ * Takes search_mutex itself. Returns false when there is no such result.
+ */
+static bool play_search_result(yt_instance_t *inst, int idx) {
+    char url[SEARCH_URL_MAX];
+
+    pthread_mutex_lock(&inst->search_mutex);
+    if (idx < 0 || idx >= inst->search_count) {
+        pthread_mutex_unlock(&inst->search_mutex);
+        return false;
+    }
+    inst->cratedig_result_index = idx;
+    snprintf(url, sizeof(url), "%s", inst->search_results[idx].url);
+    pthread_mutex_unlock(&inst->search_mutex);
+
+    stop_stream(inst);
+    snprintf(inst->stream_provider, sizeof(inst->stream_provider), "youtube");
+    snprintf(inst->stream_url, sizeof(inst->stream_url), "%s", url);
+    restart_stream_from_beginning(inst, 0);
+    if (!try_use_prefetch(inst, url)) {
+        pthread_mutex_lock(&inst->resolve_mutex);
+        inst->resolve_ready = false;
+        inst->resolve_failed = false;
+        inst->resolved_media_url[0] = '\0';
+        inst->resolved_user_agent[0] = '\0';
+        inst->resolved_referer[0] = '\0';
+        inst->resolve_error[0] = '\0';
+        pthread_mutex_unlock(&inst->resolve_mutex);
+        (void)start_resolve_async(inst);
+    }
+    return true;
+}
+
 static void v2_set_param(void *instance, const char *key, const char *val) {
     yt_instance_t *inst = (yt_instance_t *)instance;
     char log_msg[384];
@@ -2345,6 +2397,12 @@ static void v2_set_param(void *instance, const char *key, const char *val) {
             set_error(inst, "invalid stream_url");
             return;
         }
+
+        /* The user picked something: an in-flight Dig! must not replace it. */
+        pthread_mutex_lock(&inst->search_mutex);
+        inst->cratedig_autoplay_armed = false;
+        pthread_mutex_unlock(&inst->search_mutex);
+        __atomic_store_n(&inst->cratedig_autoplay_ready, 0, __ATOMIC_RELEASE);
 
         snprintf(clean_provider, sizeof(clean_provider), "%s", inst->stream_provider);
         infer_provider_from_url(clean_url, clean_provider, sizeof(clean_provider));
@@ -2473,34 +2531,12 @@ static void v2_set_param(void *instance, const char *key, const char *val) {
     if (strcmp(key, "next_track_step") == 0) {
         if (parse_trigger_value(val, &inst->next_track_step) &&
             allow_trigger(&inst->last_next_track_ms, DEBOUNCE_PLAY_PAUSE_MS)) {
+            int next_idx;
             pthread_mutex_lock(&inst->search_mutex);
-            if (inst->search_count > 0) {
-                int next_idx = inst->cratedig_result_index + 1;
-                if (next_idx >= inst->search_count) next_idx = 0;
-                inst->cratedig_result_index = next_idx;
-                if (next_idx < inst->search_count) {
-                    char next_url[SEARCH_URL_MAX];
-                    snprintf(next_url, sizeof(next_url), "%s", inst->search_results[next_idx].url);
-                    pthread_mutex_unlock(&inst->search_mutex);
-                    stop_stream(inst);
-                    snprintf(inst->stream_provider, sizeof(inst->stream_provider), "youtube");
-                    snprintf(inst->stream_url, sizeof(inst->stream_url), "%s", next_url);
-                    restart_stream_from_beginning(inst, 0);
-                    if (!try_use_prefetch(inst, next_url)) {
-                        pthread_mutex_lock(&inst->resolve_mutex);
-                        inst->resolve_ready = false;
-                        inst->resolve_failed = false;
-                        inst->resolved_media_url[0] = '\0';
-                        inst->resolved_user_agent[0] = '\0';
-                        inst->resolved_referer[0] = '\0';
-                        inst->resolve_error[0] = '\0';
-                        pthread_mutex_unlock(&inst->resolve_mutex);
-                        (void)start_resolve_async(inst);
-                    }
-                    return;
-                }
-            }
+            next_idx = inst->cratedig_result_index + 1;
+            if (next_idx >= inst->search_count) next_idx = 0;
             pthread_mutex_unlock(&inst->search_mutex);
+            (void)play_search_result(inst, next_idx);
         }
         return;
     }
@@ -2524,6 +2560,8 @@ static void v2_set_param(void *instance, const char *key, const char *val) {
         snprintf(inst->cratedig_pending_filter, sizeof(inst->cratedig_pending_filter), "%s", val);
         snprintf(inst->search_provider, sizeof(inst->search_provider), "cratedig");
         inst->cratedig_result_index = 0;
+        inst->cratedig_autoplay_armed = true;
+        __atomic_store_n(&inst->cratedig_autoplay_ready, 0, __ATOMIC_RELEASE);
         (void)start_search_async(inst, "cratedig");
         pthread_mutex_unlock(&inst->search_mutex);
         return;
@@ -3024,6 +3062,10 @@ static void v2_render_block(void *instance, int16_t *out_interleaved_lr, int fra
     memset(out_interleaved_lr, 0, needed * sizeof(int16_t));
 
     if (!inst) return;
+
+    if (__atomic_exchange_n(&inst->cratedig_autoplay_ready, 0, __ATOMIC_ACQ_REL)) {
+        (void)play_search_result(inst, 0);
+    }
 
     if (inst->stream_url[0] == '\0') {
         return;
